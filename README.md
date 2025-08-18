@@ -5,6 +5,7 @@
 ## ⚙️ Instalación
 
 **Requisito:** Tener la extensión **Tampermonkey** instalada en tu navegador.
+**Link Tampermonkey:** https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=es
 
 ### Pasos de instalación
 1. Abre el panel de Tampermonkey y crea un **nuevo script (+)**.
@@ -12,6 +13,7 @@
 3. Copia y pega el código completo de la última versión proporcionada.
 4. Ve a **Archivo > Guardar**.
 5. **Recarga la Página:** Refresca la pestaña de `wplace.live`. El panel del script aparecerá en la esquina superior derecha.
+6. No olvides darle los permisos necesarios.
 
 ---
 
