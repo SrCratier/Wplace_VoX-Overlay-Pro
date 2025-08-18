@@ -1,3 +1,5 @@
+**Créditos a su autor original (shinkonet), me basé en su código para implementar las modificaciones.**
+
 # 📘 Manual de Usuario: Wplace Overlay Pro 4.2.0
 
 ---
