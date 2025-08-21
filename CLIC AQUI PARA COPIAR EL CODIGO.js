@@ -607,7 +607,6 @@
 
     const keysToSave = ['copyPointA', 'copyPointB', 'isSettingCopyPoint'];
 
-    // Si ya tenemos los dos puntos, activamos la previsualización.
     if (config.copyPointA && config.copyPointB) {
         config.copyPreviewActive = true;
         keysToSave.push('copyPreviewActive');
