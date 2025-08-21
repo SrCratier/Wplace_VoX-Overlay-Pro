@@ -536,7 +536,7 @@
           ctx.moveTo(dx + iSect.w - 1, dy);
           ctx.lineTo(dx + iSect.w - 1, dy + iSect.h);
       }
-      
+
       ctx.stroke();
 
       return canvasToBlob(canvas);
@@ -593,18 +593,30 @@
                 }
             }
             if (config.isSettingCopyPoint) {
-                const coords = extractPixelCoords(pixelMatch.normalized);
-                const point = {
-                    chunk1: coords.chunk1, chunk2: coords.chunk2,
-                    posX: coords.posX, posY: coords.posY,
-                    absX: coords.chunk1 * TILE_SIZE + coords.posX,
-                    absY: coords.chunk2 * TILE_SIZE + coords.posY,
-                };
-                config[config.isSettingCopyPoint === 'A' ? 'copyPointA' : 'copyPointB'] = point;
-                showToast(`Punto ${config.isSettingCopyPoint} fijado en (${point.absX}, ${point.absY})`);
-                config.isSettingCopyPoint = null;
-                await saveConfig(['copyPointA', 'copyPointB', 'isSettingCopyPoint']);
-            }
+    const coords = extractPixelCoords(pixelMatch.normalized);
+    const point = {
+        chunk1: coords.chunk1, chunk2: coords.chunk2,
+        posX: coords.posX, posY: coords.posY,
+        absX: coords.chunk1 * TILE_SIZE + coords.posX,
+        absY: coords.chunk2 * TILE_SIZE + coords.posY,
+    };
+    const pointBeingSet = config.isSettingCopyPoint;
+    config[pointBeingSet === 'A' ? 'copyPointA' : 'copyPointB'] = point;
+    showToast(`Punto ${pointBeingSet} fijado en (${point.absX}, ${point.absY})`);
+    config.isSettingCopyPoint = null;
+
+    const keysToSave = ['copyPointA', 'copyPointB', 'isSettingCopyPoint'];
+
+    // Si ya tenemos los dos puntos, activamos la previsualización.
+    if (config.copyPointA && config.copyPointB) {
+        config.copyPreviewActive = true;
+        keysToSave.push('copyPreviewActive');
+        showToast('Área de previsualización activada automáticamente.');
+        clearOverlayCache();
+    }
+
+    await saveConfig(keysToSave);
+}
             updateUI();
             ensureHook();
         }
@@ -1092,7 +1104,7 @@
 
   async function addBlankOverlay() {
     const name = uniqueName('Overlay');
-    const ov = { id: uid(), name, enabled: true, imageUrl: null, imageBase64: null, isLocal: false, pixelUrl: null, offsetX: 0, offsetY: 0, opacity: 0.7 };
+    const ov = { id: uid(), name, enabled: true, imageUrl: null, imageBase64: null, isLocal: false, pixelUrl: null, offsetX: 0, offsetY: 0, opacity: 1.0 };
     config.overlays.push(ov);
     config.activeOverlayId = ov.id;
     await saveConfig(['overlays', 'activeOverlayId']);
@@ -1129,7 +1141,7 @@
       const pixelUrl = item.pixelUrl ?? null;
       const offsetX = Number.isFinite(item.offsetX) ? item.offsetX : 0;
       const offsetY = Number.isFinite(item.offsetY) ? item.offsetY : 0;
-      const opacity = Number.isFinite(item.opacity) ? item.opacity : 0.7;
+      const opacity = Number.isFinite(item.opacity) ? item.opacity : 1.0;
       if (!imageUrl) { failed++; continue; }
       try {
         const base64 = await urlToDataURL(imageUrl);
@@ -1229,6 +1241,14 @@
     a.click();
     document.body.removeChild(a);
     showToast(`¡Copia del lienzo descargada!`);
+
+if (config.copyPreviewActive) {
+    config.copyPreviewActive = false;
+    await saveConfig(['copyPreviewActive']);
+    clearOverlayCache();
+    ensureHook();
+    updateUI();
+}
   }
 
   function addEventListeners() {
@@ -1257,7 +1277,17 @@
       updateUI();
     });
 
-    $('op-autocap-toggle').addEventListener('click', () => { config.autoCapturePixelUrl = !config.autoCapturePixelUrl; saveConfig(['autoCapturePixelUrl']); ensureHook(); updateUI(); });
+    $('op-autocap-toggle').addEventListener('click', () => {
+    config.autoCapturePixelUrl = !config.autoCapturePixelUrl;
+
+    if (config.autoCapturePixelUrl) {
+        config.isSettingCopyPoint = null;
+        showToast('Modo de fijación de ancla activado.');
+    }
+    saveConfig(['autoCapturePixelUrl', 'isSettingCopyPoint']);
+    ensureHook();
+    updateUI();
+    });
 
     $('op-show-errors-toggle').addEventListener('click', () => {
         config.showErrors = !config.showErrors;
@@ -1268,8 +1298,17 @@
     });
 
     $('op-collapse-copier').addEventListener('click', () => { config.collapseCopier = !config.collapseCopier; saveConfig(['collapseCopier']); updateUI(); });
-    $('op-copy-set-a').addEventListener('click', () => { config.isSettingCopyPoint = 'A'; saveConfig(['isSettingCopyPoint']); showToast('Haz clic en el lienzo para fijar el punto A'); updateUI(); ensureHook(); });
-    $('op-copy-set-b').addEventListener('click', () => { config.isSettingCopyPoint = 'B'; saveConfig(['isSettingCopyPoint']); showToast('Haz clic en el lienzo para fijar el punto B'); updateUI(); ensureHook(); });
+    const setCopyPoint = (point) => {
+    config.isSettingCopyPoint = point;
+
+    if (point) config.autoCapturePixelUrl = false;
+    saveConfig(['isSettingCopyPoint', 'autoCapturePixelUrl']);
+    showToast(`Haz clic en el lienzo para fijar el punto ${point}`);
+    updateUI();
+    ensureHook();
+     };
+    $('op-copy-set-a').addEventListener('click', () => setCopyPoint('A'));
+    $('op-copy-set-b').addEventListener('click', () => setCopyPoint('B'));
     $('op-copy-create').addEventListener('click', () => { createCanvasCopy(); });
     $('op-copy-preview-toggle').addEventListener('click', () => {
         if (!config.copyPointA || !config.copyPointB) {
@@ -1327,7 +1366,19 @@
     $('op-nudge-left').addEventListener('click', () => nudge(-1, 0));
     $('op-nudge-right').addEventListener('click', () => nudge(1, 0));
 
-    $('op-opacity-slider').addEventListener('input', (e) => { const ov = getActiveOverlay(); if (!ov) return; ov.opacity = parseFloat(e.target.value); document.getElementById('op-opacity-value').textContent = Math.round(ov.opacity * 100) + '%'; });
+    $('op-opacity-slider').addEventListener('input', (e) => {
+    const ov = getActiveOverlay(); if (!ov) return;
+    ov.opacity = parseFloat(e.target.value);
+    document.getElementById('op-opacity-value').textContent = Math.round(ov.opacity * 100) + '%';
+
+    if (config.showErrors) {
+        config.showErrors = false;
+        saveConfig(['showErrors']);
+        clearOverlayCache();
+        showToast('Modo de errores desactivado para ajustar la opacidad.');
+        updateUI();
+    }
+    });
     $('op-opacity-slider').addEventListener('change', async () => { await saveConfig(['overlays']); clearOverlayCache(); });
 
     $('op-download-overlay').addEventListener('click', () => {
