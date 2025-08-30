@@ -17,7 +17,7 @@ Para usar el script, primero necesitas una extensión de navegador llamada **Tam
    - [Otros navegadores](https://www.tampermonkey.net/)
 
 2. Instala el Script:  
-   Una vez tengas Tampermonkey, simplemente ve a la página de la Release en GitHub y haz clic en el archivo **WplacePro-VoX.user.js**.  
+   Una vez tengas Tampermonkey, simplemente ve a la página de la Release en GitHub y haz clic en https://github.com/SrCratier/Wplace_VoX-Overlay-Pro/releases/download/v4.9.1/WplacePro-VoX.user.js o archivo **WplacePro-VoX.user.js**.  
    Tampermonkey se abrirá automáticamente y te pedirá que instales el script.
 
 ---
