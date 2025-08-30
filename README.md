@@ -12,6 +12,7 @@ Esta guía te ayudará a dominar todas las herramientas que el script pone a tu 
 Para usar el script, primero necesitas una extensión de navegador llamada **Tampermonkey**.
 
 1. Instala Tampermonkey:
+**IMPORTANTE, PARA TELÉFONOS SOLO FUNCIONA CON EL NAVEGADOR MICROSOFT EDGE - AGREGAR EXTENSIÓN DESDE EL MENÚ**
    - [Tampermonkey para Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
    - [Tampermonkey para Firefox](https://addons.mozilla.org/es/firefox/addon/tampermonkey/)
    - [Otros navegadores](https://www.tampermonkey.net/)
