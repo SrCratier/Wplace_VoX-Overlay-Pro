@@ -12,12 +12,14 @@ Esta guía te ayudará a dominar todas las herramientas que el script pone a tu 
 Para usar el script, primero necesitas una extensión de navegador llamada **Tampermonkey**.
 
 1. Instala Tampermonkey:
+   
 **IMPORTANTE, PARA TELÉFONOS SOLO FUNCIONA CON EL NAVEGADOR MICROSOFT EDGE - AGREGAR EXTENSIÓN DESDE EL MENÚ**
+
    - [Tampermonkey para Chrome](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
    - [Tampermonkey para Firefox](https://addons.mozilla.org/es/firefox/addon/tampermonkey/)
    - [Otros navegadores](https://www.tampermonkey.net/)
 
-2. Instala el Script:  
+3. Instala el Script:  
    Una vez tengas Tampermonkey, simplemente ve a la página de la Release en GitHub y haz clic en https://github.com/SrCratier/Wplace_VoX-Overlay-Pro/releases/download/v4.9.1/WplacePro-VoX.user.js o archivo **WplacePro-VoX.user.js**.  
    Tampermonkey se abrirá automáticamente y te pedirá que instales el script.
 
