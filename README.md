@@ -1,4 +1,6 @@
 # VoX - Overlay Pro: Guía de Usuario Completa -_- /
+**Basado en el código de shinkonet, adaptado y mejorado para Wplace.**
+**Based on shinkonet’s code, adapted and enhanced for Wplace.**
 
 ¡Bienvenido a **VoX - Overlay Pro**!  
 Esta guía te ayudará a dominar todas las herramientas que el script pone a tu disposición, desde colocar tu primer diseño hasta usar las funciones más avanzadas para coordinar y planificar.
