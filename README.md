@@ -7,6 +7,15 @@ Esta guía te ayudará a dominar todas las herramientas que el script pone a tu 
 
 ---
 
+**<p align="center"><strong>TRANSLATIONS</strong></p>**
+<p align="center">
+    <a href="README_EN.md"><img src="https://flagcdn.com/48x36/us.png" alt="US Flag"></a>
+  &nbsp;
+    <a href="README_FR.md"><img src="https://flagcdn.com/48x36/fr.png" width="48" alt="French Flag"></a>
+</p>
+
+---
+
 ## **1. Instalación**
 
 Para usar el script, primero necesitas una extensión de navegador llamada **Tampermonkey**.
@@ -20,7 +29,7 @@ Para usar el script, primero necesitas una extensión de navegador llamada **Tam
    - [Otros navegadores](https://www.tampermonkey.net/)
 
 3. Instala el Script:  
-   Una vez tengas Tampermonkey, simplemente ve a la página de la Release en GitHub y haz clic en https://github.com/SrCratier/Wplace_VoX-Overlay-Pro/releases/download/v4.9.1/WplacePro-VoX.user.js o archivo **WplacePro-VoX.user.js**.  
+   Una vez tengas Tampermonkey, simplemente ve a la página de la [Release](https://github.com/SrCratier/Wplace_VoX-Overlay-Pro/releases) en GitHub y haz clic en https://github.com/SrCratier/Wplace_VoX-Overlay-Pro/releases/download/v4.9.2/WplacePro-VoX.user.js o archivo **WplacePro-VoX.user.js**.  
    Tampermonkey se abrirá automáticamente y te pedirá que instales el script.
 
 ---
