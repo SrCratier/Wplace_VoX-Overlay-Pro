@@ -49,7 +49,7 @@ Sigue estos pasos para colocar tu diseño sobre el lienzo con la mejor calidad d
 Antes de cargar tu imagen, selecciona el **Modo** que mejor se adapte a tu diseño en el menú desplegable:
 *   **🌿 Natural:** (Por defecto) Ideal para fotografías, memes y degradados suaves.
 *   **⚡ Vibrante:** Perfecto para logotipos, textos y colores neón brillantes.
-*   **💀 Intenso (Anime):** Un modo matemático pesado que prioriza el tono exacto (HSV). Úsalo para Pixel Art complejo o Anime.
+*   **💀 Intenso (Anime):** Un modo matemático pesado que prioriza el tono exacto (HSV). Úsalo para Pixel Art complejo o Anime. (🚨Precaución : Este modo de renderizado es MUY PESADO y podría arruinar tu progreso!)
 
 **Paso 3: Cargar la Imagen**
 *   **Desde URL:** Pega el enlace directo y clic en **Cargar**.
