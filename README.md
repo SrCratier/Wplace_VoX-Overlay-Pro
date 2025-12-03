@@ -112,3 +112,4 @@ Este script es gratuito y se mantiene gracias a la comunidad. Si te ha sido úti
 ---
 
 ¡Disfruta creando en **wplace.live** con VoX Overlay Pro! 🚀
+Sinceramente no tenía intención de terminarlo, pero tuve un golpe de creatividad y aquí tienen. (no creo que publique más actualizaciones) a no ser que sean para actualizar compatibilidad.
