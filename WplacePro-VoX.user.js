@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         Wplace Overlay Pro Modified By @SrCratier
 // @namespace    http://tampermonkey.net/
-// @version      4.9.2
+// @version      5.0.1
 // @description  Overlays tiles on wplace.live. Can also resize, and color-match your overlay to wplace's palette. Make sure to comply with the site's Terms of Service, and rules! This script is not affiliated with Wplace.live in any way, use at your own risk. This script is not affiliated with TamperMonkey. The author of this userscript is not responsible for any damages, issues, loss of data, or punishment that may occur as a result of using this script. This script is provided "as is" under GPLv3.
 // @author       shinkonet (Modificado por @SrCratier)
 // @updateURL    https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
 // @downloadURL  https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
-// @match        https://wplace.live/*
 // @license      GPLv3
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -22,7 +21,7 @@
   'use strict';
 
   const TILE_SIZE = 1000;
-  const MAX_OVERLAY_DIM = 1000;
+  const MAX_OVERLAY_DIM = 3000;
   const MINIFY_SCALE = 3;
   const NATIVE_FETCH = window.fetch;
   const tileDataCache = new Map();
@@ -135,7 +134,10 @@
     // ------------------------------- LISTA DE DONADORES ----------------------------------------
 
 const DONATORS = [
-{ name: "Nadie aún ", contribution: "- 0 USD   :(" },
+
+{ name: "kleyder1205 ", contribution: "- Donó 5 USD   :D ❤️" },
+{ name: "Nuntius ", contribution: "- Donó 5 USD   :D ❤️" },
+{ name: "espressos work ", contribution: "- Donó 5 USD   :D ❤️" },
 
 ];
 
@@ -217,7 +219,7 @@ const DONATORS = [
     if (!ov.enabled || !ov.imageBase64 || !ov.pixelUrl) return null;
     if (tooLargeOverlays.has(ov.id)) return null;
     const sig = overlaySignature(ov);
-    const cacheKey = `${ov.id}|${sig}|${targetChunk1}|${targetChunk2}|errors=${config.showErrors}|filter=${config.caIsFilterActive}`;
+    const cacheKey = `${ov.id}|${sig}|${targetChunk1}|${targetChunk2}|errors=${config.showErrors}|filter=${ov.filterActive}`;
     if (overlayCache.has(cacheKey)) return overlayCache.get(cacheKey);
     const img = await loadImage(ov.imageBase64);
     if (!img) return null;
@@ -242,7 +244,7 @@ const DONATORS = [
     const whiteStrength = 1 - colorStrength;
     const isErrorCheckMode = config.showErrors && originalTileImageData;
 
-    const filterSet = config.caIsFilterActive ? new Set(config.caActiveColorFilter) : null;
+    const filterSet = (ov.filterActive && ov.savedFilters) ? new Set(ov.savedFilters) : null;
 
     for (let i = 0; i < data.length; i += 4) {
         if (data[i + 3] < 250) {
@@ -355,7 +357,7 @@ const DONATORS = [
 
     const scale = MINIFY_SCALE;
     const sig = overlaySignature(ov);
-    const cacheKey = `${ov.id}|${sig}|minify|s${scale}|${targetChunk1}|${targetChunk2}|errors=${config.showErrors}|filter=${config.caIsFilterActive}`;
+    const cacheKey = `${ov.id}|${sig}|minify|s${scale}|${targetChunk1}|${targetChunk2}|errors=${config.showErrors}|filter=${ov.filterActive}`;
     if (overlayCache.has(cacheKey)) return overlayCache.get(cacheKey);
 
     const img = await loadImage(ov.imageBase64);
@@ -394,7 +396,7 @@ const DONATORS = [
     const width = isect.w;
     const isErrorCheckMode = config.showErrors && originalTileImageData;
     const errorCache = new Map();
-    const filterSet = config.caIsFilterActive ? new Set(config.caActiveColorFilter) : null;
+    const filterSet = (ov.filterActive && ov.savedFilters) ? new Set(ov.savedFilters) : null;
 
     for (let i = 0; i < data.length; i += 4) {
       const r_ov = data[i], g_ov = data[i+1], b_ov = data[i+2], a = data[i+3];
@@ -557,38 +559,6 @@ const DONATORS = [
     return canvasToBlob(canvas);
 }
 
-function forceTileRefresh() {
-    const CANVAS_CONTAINER_SELECTOR = '.canvas-container';
-    const MAX_RETRIES = 20;
-    const RETRY_INTERVAL = 500;
-    let retries = 0;
-
-    const attemptRefresh = () => {
-        const container = document.querySelector(CANVAS_CONTAINER_SELECTOR);
-        const tiles = container ? container.querySelectorAll('img') : null;
-
-        if (container && tiles && tiles.length > 0) {
-            tiles.forEach(img => {
-                if (img.src && matchTileUrl(img.src)) {
-                    const url = new URL(img.src);
-                    url.searchParams.set('t', Date.now());
-                    img.src = url.toString();
-                }
-            });
-            showToast('Lienzo actualizado.', 1500);
-            clearInterval(refreshInterval);
-        } else {
-            retries++;
-            if (retries >= MAX_RETRIES) {
-                clearInterval(refreshInterval);
-                showToast('Error: No se pudo encontrar el lienzo del juego para refrescar.', 3000);
-            }
-        }
-    };
-
-    const refreshInterval = setInterval(attemptRefresh, RETRY_INTERVAL);
-}
-
 function showToast(message, duration = 3000) {
     let stack = document.getElementById('op-toast-stack');
     if (!stack) {
@@ -670,7 +640,6 @@ function showToast(message, duration = 3000) {
             ensureHook();
             const response = await originalFetch(input, init);
 
-            // If a pixel was placed successfully and the progress panel is open, refresh it.
             if (response.ok && config.isColorPanelVisible) {
                 await updateOverlayProgress();
             }
@@ -707,6 +676,9 @@ function showToast(message, duration = 3000) {
                 tempCtx.drawImage(originalImage, 0, 0);
                 const originalTileImageData = tempCtx.getImageData(0, 0, originalImage.width, originalImage.height);
                 tileDataCache.set(`${tileMatch.chunk1}/${tileMatch.chunk2}`, originalTileImageData);
+
+                if (tileDataCache.size > 50) tileDataCache.delete(tileDataCache.keys().next().value);
+
                 let finalBlob = originalBlob;
                 const validModes = ['behind', 'above', 'minify'];
                 const enabledOverlays = config.overlays.filter(o => o.enabled && o.imageBase64 && o.pixelUrl);
@@ -778,8 +750,6 @@ function showToast(message, duration = 3000) {
     caSortEnabled: true,
     caHighlightEnabled: true,
     caIsCollapsed: false,
-    caIsFilterActive: false,
-    caActiveColorFilter: [],
     caFiltersVisible: false,
     caShowColorNames: true,
     caShowProgress: true,
@@ -876,8 +846,26 @@ function injectStyles() {
       .op-button:disabled { opacity: 0.5; cursor: not-allowed; }
       .op-button.icon { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
 
-      .op-input, .op-select { background: var(--op-bg); border: 1px solid var(--op-border); color: var(--op-text); border-radius: 10px; padding: 6px 8px; width: 100%; box-sizing: border-box; transition: all 0.2s ease; }
-      .op-input:focus, .op-select:focus { border-color: var(--op-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--op-accent) 20%, transparent); }
+      .op-input { background: var(--op-bg); border: 1px solid var(--op-border); color: var(--op-text); border-radius: 10px; padding: 8px; width: 100%; box-sizing: border-box; transition: all 0.2s ease; }
+
+      .op-select {
+        appearance: none; -webkit-appearance: none; -moz-appearance: none;
+        background-color: var(--op-bg);
+        border: 1px solid var(--op-border);
+        color: var(--op-text);
+        border-radius: 12px;
+        padding: 8px 32px 8px 12px;
+        width: 100%;
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+        background-size: 16px;
+        transition: all 0.2s ease;
+        font-size: 13px;
+      }
+
+      .op-input:focus, .op-select:focus { outline: none; border-color: var(--op-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--op-accent) 25%, transparent); }
 
       /* SLIDER STYLES */
       input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; cursor: pointer; }
@@ -1163,7 +1151,6 @@ panel.innerHTML = `
   <div class="op-header" id="op-header">
     <h3>VoX - Overlay Pro<span style="font-size: 13px; color: var(--op-muted); font-weight: 500; margin-left: 8px;">-_-/</span></h3>
     <div class="op-header-actions">
-        <button class="op-hdr-btn" id="op-refresh-btn" title="Actualizar vista del overlay">⟲</button>
         <button class="op-hdr-btn" id="op-main-settings-btn" title="Ajustes">⚙️</button>
         <button class="op-toggle-btn" id="op-panel-toggle" title="Plegar/Desplegar">▾</button>
     </div>
@@ -1207,6 +1194,16 @@ panel.innerHTML = `
                         <div class="op-row">
                             <label style="width: 60px;">Nombre</label>
                             <input type="text" class="op-input op-grow" id="op-name">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="op-row">
+                            <label style="width: 60px;">Modo</label>
+                            <select class="op-select op-grow" id="op-color-mode" title="Elige cómo se procesan los colores.">
+                                <option value="perceptual">Natural (Recomendado para Fotos)</option>
+                                <option value="euclidean">Vibrante (Logos y Neón)</option>
+                                <option value="hsv">PESADO!💀(Prioridad Color/Anime)</option>
+                            </select>
                         </div>
                     </div>
                     <div>
@@ -1300,7 +1297,6 @@ panel.innerHTML = `
 
     document.body.appendChild(panel);
 
-    // --- Main Settings Modal & Backdrop ---
     const settingsModal = document.createElement('div');
     settingsModal.id = 'op-main-settings-modal';
     settingsModal.className = 'op-modal';
@@ -1315,7 +1311,7 @@ panel.innerHTML = `
         </div>
         <input type="range" id="op-panel-alpha-slider" min="0.4" max="1" step="0.05">
         <div class="op-donation-section">
-            <p>Este proyecto es gratuito, pero agradecería una donación para apoyar el proyecto ❤️</p>
+            <p>Este proyecto es gratuito, pero agradecería una donación para apoyar el desarrollo ❤️</p>
             <div class="op-donation-info">
                 <span>Binance ID:</span>
                 <code>851390091</code>
@@ -1335,14 +1331,12 @@ panel.innerHTML = `
     backdrop.className = 'op-backdrop';
     document.body.appendChild(backdrop);
 
-    // --- Color Analysis Panel ---
     const colorAnalysisPanel = document.createElement('div');
         colorAnalysisPanel.id = 'op-color-analysis-panel';
     colorAnalysisPanel.innerHTML = `
     <div class="op-ca-header" id="op-ca-header-drag">
         <span>Progreso de Colores</span>
         <div class="op-ca-settings-wrap">
-            <button class="op-ca-settings-btn" id="op-ca-highlight-btn" title="Resaltar píxeles faltantes">🎯</button>
             <button class="op-ca-settings-btn" id="op-ca-settings-btn" title="Ajustes de Progreso">⚙️</button>
             <button class="op-ca-settings-btn" id="op-ca-toggle-collapse" title="Plegar/Desplegar" style="margin-left: 5px;">▾</button>
         </div>
@@ -1385,7 +1379,6 @@ panel.innerHTML = `
 `;
     document.body.appendChild(colorAnalysisPanel);
 
-    // --- Color Analysis Settings Modal & Backdrop ---
     const caSettingsModal = document.createElement('div');
     caSettingsModal.id = 'op-ca-settings-modal';
     caSettingsModal.className = 'op-modal';
@@ -1396,10 +1389,7 @@ panel.innerHTML = `
                 <label>Ordenar por cantidad</label>
                 <div class="op-switch" id="op-ca-sort-toggle"></div>
             </div>
-            <div class="op-ca-control-row">
-                <label>Resaltar disponibles</label>
-                <div class="op-switch" id="op-ca-highlight-toggle"></div>
-            </div>
+
         </div>
         <hr style="border-color: var(--op-border); margin: 12px 0;">
         <label>Transparencia del Panel</label>
@@ -1425,7 +1415,6 @@ panel.innerHTML = `
     caBackdrop.className = 'op-backdrop';
     document.body.appendChild(caBackdrop);
 
-    // --- Final Setup Calls ---
     buildCCModal();
     buildRSModal();
     addEventListeners();
@@ -1506,23 +1495,132 @@ function rebuildOverlayListUI() {
     return ov;
   }
 
+async function processImageToPalette(base64, mode = 'perceptual') {
+    const img = await loadImage(base64);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const palette = [...WPLACE_FREE, ...WPLACE_PAID];
+
+    const rgbToHsv = (r, g, b) => {
+        r /= 255; g /= 255; b /= 255;
+        const max = (r > g && r > b) ? r : (g > b) ? g : b;
+        const min = (r < g && r < b) ? r : (g < b) ? g : b;
+        let h, s, v = max;
+        const d = max - min;
+        s = max === 0 ? 0 : d / max;
+        if (max === min) h = 0;
+        else {
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return [h, s, v];
+    };
+
+    const paletteHSV = (mode === 'hsv') ? palette.map(c => {
+        const [h, s, v] = rgbToHsv(c[0], c[1], c[2]);
+        return { rgb: c, h, s, v };
+    }) : null;
+
+    const CHUNK_SIZE = 40000;
+
+    for (let i = 0; i < data.length; i += 4) {
+
+      if (i % (CHUNK_SIZE * 4) === 0) await new Promise(r => setTimeout(r, 0));
+
+      if (data[i + 3] < 128) { data[i+3] = 0; continue; }
+
+      const r = data[i], g = data[i+1], b = data[i+2];
+      let best = palette[0], min = Infinity;
+
+      if (mode === 'hsv') {
+          const [h1, s1, v1] = rgbToHsv(r, g, b);
+
+          for (let j = 0; j < paletteHSV.length; j++) {
+              const p = paletteHSV[j];
+              let dh = Math.abs(h1 - p.h);
+              if (dh > 0.5) dh = 1 - dh;
+
+              const dist = (dh * 4) ** 2 + (Math.abs(s1 - p.s) * 2) ** 2 + (Math.abs(v1 - p.v) * 1) ** 2;
+              if (dist < min) { min = dist; best = p.rgb; }
+          }
+      } else {
+
+          for (let j = 0; j < palette.length; j++) {
+              const [pr, pg, pb] = palette[j];
+              let dist;
+              if (mode === 'euclidean') {
+                  const dr = r - pr, dg = g - pg, db = b - pb;
+                  dist = dr * dr + dg * dg + db * db;
+              } else {
+                  const rmean = (r + pr) >> 1;
+                  const dr = r - pr, dg = g - pg, db = b - pb;
+                  dist = (((512 + rmean) * dr * dr) >> 8) + 4 * dg * dg + (((767 - rmean) * db * db) >> 8);
+              }
+              if (dist < min) { min = dist; best = palette[j]; }
+          }
+      }
+      data[i] = best[0]; data[i+1] = best[1]; data[i+2] = best[2]; data[i+3] = 255;
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
   async function setOverlayImageFromURL(ov, url) {
-    const base64 = await urlToDataURL(url);
-    ov.imageUrl = url; ov.imageBase64 = base64; ov.isLocal = false;
+    const mode = document.getElementById('op-color-mode').value;
+    showToast(`Procesando (${mode === 'euclidean' ? 'Matemático' : 'Natural'})...`);
+
+    const rawBase64 = await urlToDataURL(url);
+    const processedBase64 = await processImageToPalette(rawBase64, mode);
+
+    ov.imageUrl = url;
+    ov.imageBase64 = processedBase64;
+    ov.isLocal = false;
+
+    ov.filterActive = false;
+    ov.savedFilters = [];
+
     await saveConfig(['overlays']); clearOverlayCache();
     config.autoCapturePixelUrl = true; await saveConfig(['autoCapturePixelUrl']);
     ensureHook(); updateUI();
-    showToast(`Imagen cargada. Modo de fijación activado: haz clic para establecer el ancla.`);
+
+    document.getElementById('op-color-mode').value = 'perceptual';
+
+    showToast(`Imagen procesada y cargada. Haz clic para establecer el ancla.`);
   }
-  async function setOverlayImageFromFile(ov, file) {
+
+async function setOverlayImageFromFile(ov, file) {
     if (!file || !file.type || !file.type.startsWith('image/')) { alert('Por favor, elige un archivo de imagen.'); return; }
     if (!confirm('¡Los PNG locales no se pueden exportar/compartir! ¿Estás seguro?')) return;
-    const base64 = await fileToDataURL(file);
-    ov.imageBase64 = base64; ov.imageUrl = null; ov.isLocal = true;
+
+    const mode = document.getElementById('op-color-mode').value;
+    showToast(`Procesando local (${mode === 'euclidean' ? 'Matemático' : 'Natural'})...`);
+
+    const rawBase64 = await fileToDataURL(file);
+    const processedBase64 = await processImageToPalette(rawBase64, mode);
+
+    ov.imageBase64 = processedBase64;
+    ov.imageUrl = null;
+    ov.isLocal = true;
+
+    ov.filterActive = false;
+    ov.savedFilters = [];
+
     await saveConfig(['overlays']); clearOverlayCache();
     config.autoCapturePixelUrl = true; await saveConfig(['autoCapturePixelUrl']);
     ensureHook(); updateUI();
-    showToast(`Imagen local cargada. Modo de fijación activado: haz clic para establecer el ancla.`);
+
+    document.getElementById('op-color-mode').value = 'perceptual';
+
+    showToast(`Imagen local procesada. Haz clic para establecer el ancla.`);
   }
 
   async function importOverlayFromJSON(jsonText) {
@@ -1579,8 +1677,8 @@ function rebuildOverlayListUI() {
     const W = maxX - minX + 1;
     const H = maxY - minY + 1;
 
-    if (W > 4000 || H > 4000) {
-        showToast(`El área es demasiado grande (${W}x${H}). El máximo es 4000px por lado.`);
+    if (W > 50000 || H > 50000) {
+        showToast(`El área es demasiado grande (${W}x${H}). El máximo es 50000px por lado.`);
         return;
     }
 
@@ -1676,23 +1774,8 @@ function addEventListeners() {
         e.stopPropagation();
         config.theme = config.theme === 'light' ? 'dark' : 'light';
         await saveConfig(['theme']);
-        applyTheme();
+applyTheme();
         updateUI();
-    });
-    $('op-refresh-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        const btn = e.currentTarget;
-
-        btn.disabled = true;
-        btn.innerHTML = `<span style="font-family: monospace; font-weight: bold;">...</span>`;
-
-        clearOverlayCache();
-        forceTileRefresh();
-
-        setTimeout(() => {
-            btn.innerHTML = '⟲';
-            btn.disabled = false;
-        }, 1500);
     });
 
     $('op-panel-toggle').addEventListener('click', (e) => { e.stopPropagation(); config.isPanelCollapsed = !config.isPanelCollapsed; saveConfig(['isPanelCollapsed']); updateUI(); });
@@ -1703,7 +1786,7 @@ function addEventListeners() {
         clearOverlayCache();
         ensureHook();
         updateUI();
-        forceTileRefresh();
+        showToast('Cambios aplicados. Mueve el mapa o pon un píxel para verlos.');
     });
 
     $('op-mode-toggle').addEventListener('click', () => {
@@ -1714,7 +1797,7 @@ function addEventListeners() {
         clearOverlayCache();
         ensureHook();
         updateUI();
-        forceTileRefresh();
+        showToast('Modo cambiado. Mueve el mapa para actualizar.');
     });
 
     $('op-autocap-toggle').addEventListener('click', () => {
@@ -1759,7 +1842,7 @@ function addEventListeners() {
         clearOverlayCache();
         ensureHook();
         updateUI();
-        forceTileRefresh();
+        showToast('Modo de errores actualizado. Mueve el mapa para ver cambios.');
     });
 
     document.querySelectorAll('.op-tab-btn').forEach(btn => {
@@ -1810,8 +1893,8 @@ function addEventListeners() {
 
         const debouncedRefresh = debounce(() => {
         clearOverlayCache();
-        forceTileRefresh();
-    }, 200);
+        showToast('Posición actualizada. Mueve el mapa para ver el cambio.', 2000);
+    }, 500);
 
     const debouncedSave = debounce(() => {
         saveConfig(['overlays']);
@@ -1846,7 +1929,11 @@ function addEventListeners() {
             updateUI();
         }
     });
-    $('op-opacity-slider').addEventListener('change', async () => { await saveConfig(['overlays']); clearOverlayCache(); forceTileRefresh(); });
+    $('op-opacity-slider').addEventListener('change', async () => {
+        await saveConfig(['overlays']);
+        clearOverlayCache();
+        showToast('Opacidad guardada. Mueve el mapa para actualizar.');
+    });
 
     $('op-download-overlay').addEventListener('click', () => {
         const ov = getActiveOverlay();
@@ -1926,7 +2013,6 @@ function addEventListeners() {
         updateUI();
     });
 
-    // --- Main Settings Modal ---
     const mainSettingsBtn = $('op-main-settings-btn');
     const mainSettingsModal = $('op-main-settings-modal');
     const mainBackdrop = $('op-main-settings-backdrop');
@@ -1954,13 +2040,11 @@ function addEventListeners() {
         saveConfig(['panelAlpha']);
     });
 
-    // --- Color Analysis Panel Settings Modal & Switches ---
     const caSettingsBtn = $('op-ca-settings-btn');
     const caSettingsModal = $('op-ca-settings-modal');
     const caBackdrop = $('op-ca-settings-backdrop');
     const caAlphaSlider = $('op-ca-alpha-slider');
     const caSortToggle = $('op-ca-sort-toggle');
-    const caHighlightToggle = $('op-ca-highlight-toggle');
 
     const toggleCaSettingsModal = (show) => {
         caSettingsModal.classList.toggle('show', show);
@@ -1991,20 +2075,6 @@ function addEventListeners() {
         if (config.isColorPanelVisible) await updateOverlayProgress();
     });
 
-    caHighlightToggle.classList.toggle('active', config.caHighlightEnabled);
-    caHighlightToggle.addEventListener('click', async () => {
-        const isPaletteOpen = document.querySelectorAll('[id^="color-"]').length > 0;
-
-        if (!isPaletteOpen && !config.caHighlightEnabled) {
-            showToast("Abre la paleta de colores del juego para usar esta función.", 3500);
-            return;
-        }
-
-        config.caHighlightEnabled = !config.caHighlightEnabled;
-        caHighlightToggle.classList.toggle('active', config.caHighlightEnabled);
-        await saveConfig(['caHighlightEnabled']);
-        if (config.isColorPanelVisible) await updateOverlayProgress();
-    });
     document.querySelectorAll('.op-show-donators').forEach(button => {
         button.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2031,10 +2101,15 @@ function addEventListeners() {
         });
     });
 
-    $('op-ca-toggle-collapse').addEventListener('click', (e) => {
+    $('op-ca-toggle-collapse').addEventListener('click', async (e) => {
         e.stopPropagation();
         config.caIsCollapsed = !config.caIsCollapsed;
-        saveConfig(['caIsCollapsed']);
+
+        if (config.caIsCollapsed) {
+            config.caFiltersVisible = false;
+        }
+
+        await saveConfig(['caIsCollapsed', 'caFiltersVisible']);
         updateUI();
     });
 
@@ -2057,30 +2132,6 @@ function addEventListeners() {
     $('op-ca-show-names-toggle').addEventListener('click', createViewToggleHandler('caShowColorNames', true));
     $('op-ca-show-progress-toggle').addEventListener('click', createViewToggleHandler('caShowProgress', true));
     $('op-ca-show-remaining-toggle').addEventListener('click', createViewToggleHandler('caShowRemainingOnly', true));
-
-    const highlightBtn = $('op-ca-highlight-btn');
-    highlightBtn.addEventListener('click', async () => {
-        config.highlightMissing = !config.highlightMissing;
-        await saveConfig(['highlightMissing']);
-        showToast(`Resaltar faltantes: ${config.highlightMissing ? 'Activado' : 'Desactivado'}`);
-        highlightBtn.classList.toggle('active', config.highlightMissing);
-        clearOverlayCache();
-
-        const refreshWhenReady = (retries = 5) => {
-            if (retries <= 0) {
-                showToast('Error: No se pudo encontrar el lienzo del juego.', 3000);
-                return;
-            }
-            const canvasContainer = document.querySelector('.canvas-container');
-            if (canvasContainer && canvasContainer.querySelector('img')) {
-                forceTileRefresh();
-            } else {
-                setTimeout(() => refreshWhenReady(retries - 1), 500);
-            }
-        };
-
-        refreshWhenReady();
-    });
 
 }
 
@@ -2118,7 +2169,6 @@ async function updateOverlayProgress() {
     const ov = getActiveOverlay();
 
     document.getElementById('op-ca-sort-toggle').classList.toggle('active', !!config.caSortEnabled);
-    document.getElementById('op-ca-highlight-toggle').classList.toggle('active', !!config.caHighlightEnabled);
     const mainActions = document.querySelector('.op-ca-main-actions');
     if (mainActions) mainActions.style.display = 'none';
 
@@ -2198,12 +2248,15 @@ async function updateOverlayProgress() {
         });
 
         panelContent.innerHTML = '';
+        const isFilterActiveForThisOverlay = !!ov.filterActive;
+        const savedFiltersSet = new Set(ov.savedFilters || []);
+
         for (const color of colorsArray) {
             const item = document.createElement('div');
             item.className = 'op-ca-item';
             if (config.caHighlightEnabled && color.isAvailable) item.classList.add('available');
 
-            const isChecked = config.caIsFilterActive ? config.caActiveColorFilter.includes(color.key) : true;
+            const isChecked = isFilterActiveForThisOverlay ? savedFiltersSet.has(color.key) : true;
             const remaining = color.needed - color.placed;
             const progressText = config.caShowRemainingOnly ? `${remaining}` : `${color.placed} / ${color.needed}`;
 
@@ -2221,10 +2274,11 @@ async function updateOverlayProgress() {
         totalPercentageEl.textContent = `${totalNeeded > 0 ? ((totalPlaced / totalNeeded) * 100).toFixed(1) : '0.0'}%`;
 
         const applyAndRefresh = async (isFilter, colors, message) => {
-            config.caIsFilterActive = isFilter;
-            config.caActiveColorFilter = colors;
-            await saveConfig(['caIsFilterActive', 'caActiveColorFilter']);
-            clearOverlayCache(); forceTileRefresh(); showToast(message);
+            ov.filterActive = isFilter;
+            ov.savedFilters = colors;
+            await saveConfig(['overlays']);
+            clearOverlayCache();
+            showToast(message + ' Mueve el mapa para ver los cambios.');
         };
 
         document.getElementById('op-ca-apply-filter').onclick = () => {
@@ -2489,7 +2543,7 @@ function updateUI() {
             colorPanel.style.left = config.colorPanelX + 'px';
             colorPanel.style.top = config.colorPanelY + 'px';
         } else if (config.isColorPanelVisible) {
-            // Center on first show if no position is saved
+
             const rect = colorPanel.getBoundingClientRect();
             colorPanel.style.left = `${(window.innerWidth - rect.width) / 2}px`;
             colorPanel.style.top = `${(window.innerHeight - rect.height) / 2}px`;
