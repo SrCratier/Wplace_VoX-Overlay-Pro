@@ -63,6 +63,8 @@ Antes de cargar tu imagen, selecciona el **Modo** que mejor se adapte a tu dise�
 
 ---
 
+![Foto del renderizado](EJEMPLOS.png)
+
 ## **3. Panel Principal y Modos de Visualización**
 
 - **Overlay: ON/OFF** → Muestra u oculta todos tus diseños.
