@@ -1,3 +1,5 @@
+![Banner Principal](social-preview.png)
+
 # VoX - Overlay Pro: Guía de Usuario Completa -_- /
 **Basado en el código de shinkonet, adaptado y mejorado para Wplace.**
 **Based on shinkonet’s code, adapted and enhanced for Wplace.**
