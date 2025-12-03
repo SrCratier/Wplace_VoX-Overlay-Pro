@@ -6,6 +6,7 @@
 // @author       shinkonet (Modificado por @SrCratier)
 // @updateURL    https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
 // @downloadURL  https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
+// @match        https://wplace.live/*
 // @license      GPLv3
 // @grant        GM_setValue
 // @grant        GM_getValue
