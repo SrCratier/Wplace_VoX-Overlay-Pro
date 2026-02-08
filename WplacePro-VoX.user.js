@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Pro Modified By @SrCratier
 // @namespace    http://tampermonkey.net/
-// @version      5.0.2
+// @version      5.2.4
 // @description  Overlays tiles on wplace.live. Can also resize, and color-match your overlay to wplace's palette. Make sure to comply with the site's Terms of Service, and rules! This script is not affiliated with Wplace.live in any way, use at your own risk. This script is not affiliated with TamperMonkey. The author of this userscript is not responsible for any damages, issues, loss of data, or punishment that may occur as a result of using this script. This script is provided "as is" under GPLv3.
 // @author       shinkonet (Modificado por @SrCratier)
 // @updateURL    https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
@@ -132,8 +132,6 @@
 
     let lastKnownAvailableColors = new Set();
 
-    // ------------------------------- LISTA DE DONADORES ----------------------------------------
-
 const DONATORS = [
 
 { name: "kleyder1205 ", contribution: "- Donó 5 USD   :D ❤️" },
@@ -141,8 +139,6 @@ const DONATORS = [
 { name: "espressos work ", contribution: "- Donó 5 USD   :D ❤️" },
 
 ];
-
-    // ---------------------------- FIN LISTA DE DONADORES ---------------------------------------
 
   function uid() { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
       function debounce(func, wait) {
@@ -248,7 +244,7 @@ const DONATORS = [
     const filterSet = (ov.filterActive && ov.savedFilters) ? new Set(ov.savedFilters) : null;
 
     for (let i = 0; i < data.length; i += 4) {
-        if (data[i + 3] < 250) {
+        if (data[i + 3] === 0) {
             continue;
         }
 
@@ -266,7 +262,16 @@ const DONATORS = [
             const r_orig = originalTileImageData.data[originalIndex];
             const g_orig = originalTileImageData.data[originalIndex + 1];
             const b_orig = originalTileImageData.data[originalIndex + 2];
-            const isMatch = r_ov === r_orig && g_ov === g_orig && b_ov === b_orig;
+            const a_orig = originalTileImageData.data[originalIndex + 3];
+            const ovSum = r_ov + g_ov + b_ov;
+            let isMatch = false;
+
+            if (ovSum < 10) {
+                 const mapSum = r_orig + g_orig + b_orig;
+                 isMatch = (a_orig > 200) && (mapSum < 10);
+            } else {
+                 isMatch = (a_orig > 100) && (r_ov === r_orig && g_ov === g_orig && b_ov === b_orig);
+            }
             if (isMatch) {
                 data[i + 3] = 0;
             } else {
@@ -401,7 +406,7 @@ const DONATORS = [
 
     for (let i = 0; i < data.length; i += 4) {
       const r_ov = data[i], g_ov = data[i+1], b_ov = data[i+2], a = data[i+3];
-      if (a < 250) {
+      if (a === 0) {
         data[i+3] = 0;
         continue;
       }
@@ -431,8 +436,15 @@ const DONATORS = [
               const r_orig = originalTileImageData.data[originalIndex];
               const g_orig = originalTileImageData.data[originalIndex+1];
               const b_orig = originalTileImageData.data[originalIndex+2];
-              isMatch = isColorSimilar(r_ov, g_ov, b_ov, r_orig, g_orig, b_orig);
-              errorCache.set(blockKey, isMatch);
+              const a_orig = originalTileImageData.data[originalIndex+3];
+              const ovSum = r_ov + g_ov + b_ov;
+
+              if (ovSum < 10) {
+                  const mapSum = r_orig + g_orig + b_orig;
+                  isMatch = (a_orig > 200) && (mapSum < 10);
+              } else {
+                  isMatch = (a_orig > 100) && isColorSimilar(r_ov, g_ov, b_ov, r_orig, g_orig, b_orig);
+              }
           }
           if (isMatch) {
               data[i+3] = 0;
@@ -1134,6 +1146,32 @@ function injectStyles() {
        right: 5vw;
       }
      }
+     .op-custom-select { position: relative; width: 100%; font-size: 13px; }
+      .op-select-trigger {
+        background: var(--op-bg); border: 1px solid var(--op-border);
+        color: var(--op-text); border-radius: 12px; padding: 8px 12px;
+        cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        transition: all 0.2s ease;
+      }
+      .op-select-trigger:hover { border-color: var(--op-accent); background: var(--op-subtle); }
+      .op-select-trigger::after { content: '▼'; font-size: 10px; opacity: 0.7; transition: transform 0.2s; }
+      .op-custom-select.open .op-select-trigger::after { transform: rotate(180deg); }
+      .op-select-options {
+        position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+        background: rgba(var(--op-bg-rgb), 0.95); backdrop-filter: blur(12px);
+        border: 1px solid var(--op-border); border-radius: 12px;
+        padding: 6px; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        opacity: 0; transform: translateY(-10px); pointer-events: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .op-custom-select.open .op-select-options { opacity: 1; transform: translateY(0); pointer-events: auto; }
+      .op-option {
+        padding: 8px 10px; border-radius: 8px; cursor: pointer;
+        transition: background 0.2s; display: flex; align-items: center; gap: 8px;
+      }
+      .op-option:hover { background: var(--op-btn-hover); color: var(--op-accent); }
+      .op-option.selected { background: color-mix(in srgb, var(--op-accent) 15%, transparent); color: var(--op-accent); font-weight: 500; }
 `;
     document.head.appendChild(style);
 }
@@ -1200,11 +1238,23 @@ panel.innerHTML = `
                     <div>
                         <div class="op-row">
                             <label style="width: 60px;">Modo</label>
-                            <select class="op-select op-grow" id="op-color-mode" title="Elige cómo se procesan los colores.">
-                                <option value="perceptual">Natural (Recomendado para Fotos)</option>
-                                <option value="euclidean">Vibrante (Logos y Neón)</option>
-                                <option value="hsv">PESADO!💀(Prioridad Color/Anime)</option>
-                            </select>
+                            <div class="op-custom-select" id="op-mode-dropdown">
+                                <input type="hidden" id="op-color-mode" value="standard">
+                                <div class="op-select-trigger" id="op-mode-trigger">
+                                    <span id="op-mode-text">Estándar (Recomendado)</span>
+                                </div>
+                                <div class="op-select-options">
+                                    <div class="op-option selected" data-value="standard">
+                                        <span>•</span> Estándar (Recomendado)
+                                    </div>
+                                    <div class="op-option" data-value="enhanced">
+                                        <span>•</span> Mejorado (Dibujos/Pixel Art)
+                                    </div>
+                                    <div class="op-option" data-value="photorealistic">
+                                        <span>•</span> Fotorealista (Dithering Fuerte)
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -1253,7 +1303,7 @@ panel.innerHTML = `
             <div class="op-tab-pane" data-pane="tools">
                 <div>
                     <span style="font-weight:600; text-align:center; margin-bottom: 8px;">Copiar Lienzo</span>
-                    <div class="op-row space">
+                    <div class="op-row space" style="margin-bottom: 10px;">
                         <button class="op-button" id="op-copy-set-a">Fijar Punto A</button>
                         <span class="op-muted" id="op-copy-a-coords">No fijado</span>
                     </div>
@@ -1283,7 +1333,7 @@ panel.innerHTML = `
                     </div>
                     <div class="op-row space" style="margin-top: 4px;">
                         <button class="op-button" id="op-copy-preview-toggle" style="flex:1;">Visualizar Área</button>
-                        <button class="op-button" id="op-copy-create" style="flex:1;" title="Detecta y descarga una imagen del área seleccionada.">Detectar y Descargar</button>
+                        <button class="op-button" id="op-copy-create" style="flex:1;" title="Detecta y descarga una imagen del área seleccionada.">Descargar</button>
                     </div>
                 </div>
 
@@ -1496,84 +1546,130 @@ function rebuildOverlayListUI() {
     return ov;
   }
 
-async function processImageToPalette(base64, mode = 'perceptual') {
+async function processImageToPalette(base64, mode = 'standard') {
     const img = await loadImage(base64);
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
+
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+
     const palette = [...WPLACE_FREE, ...WPLACE_PAID];
 
-    const rgbToHsv = (r, g, b) => {
-        r /= 255; g /= 255; b /= 255;
-        const max = (r > g && r > b) ? r : (g > b) ? g : b;
-        const min = (r < g && r < b) ? r : (g < b) ? g : b;
-        let h, s, v = max;
-        const d = max - min;
-        s = max === 0 ? 0 : d / max;
-        if (max === min) h = 0;
-        else {
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
+    const getNearestColor = (r, g, b) => {
+        let minInfo = Infinity;
+        let bestColor = palette[0];
+
+        for (let i = 0; i < palette.length; i++) {
+            const p = palette[i];
+            const pr = p[0], pg = p[1], pb = p[2];
+
+            const rmean = (r + pr) * 0.5;
+            const dr = r - pr;
+            const dg = g - pg;
+            const db = b - pb;
+
+            const dist = (((512 + rmean) * dr * dr) >> 8) + (4 * dg * dg) + (((767 - rmean) * db * db) >> 8);
+
+            if (dist < minInfo) {
+                minInfo = dist;
+                bestColor = p;
             }
-            h /= 6;
         }
-        return [h, s, v];
+        return bestColor;
     };
 
-    const paletteHSV = (mode === 'hsv') ? palette.map(c => {
-        const [h, s, v] = rgbToHsv(c[0], c[1], c[2]);
-        return { rgb: c, h, s, v };
-    }) : null;
+    const CHUNK_SIZE = 50000;
+    let pixelIndex = 0;
 
-    const CHUNK_SIZE = 40000;
+    await new Promise(resolve => {
+        const processChunk = () => {
+            const end = Math.min(pixelIndex + CHUNK_SIZE, data.length / 4);
 
-    for (let i = 0; i < data.length; i += 4) {
+            for (let i = pixelIndex; i < end; i++) {
+                const idx = i * 4;
+                const r = data[idx];
+                const g = data[idx + 1];
+                const b = data[idx + 2];
+                const a = data[idx + 3];
 
-      if (i % (CHUNK_SIZE * 4) === 0) await new Promise(r => setTimeout(r, 0));
+                if (a < 128) {
+                    data[idx + 3] = 0;
+                    continue;
+                }
 
-      if (data[i + 3] < 128) { data[i+3] = 0; continue; }
+                const best = getNearestColor(r, g, b);
 
-      const r = data[i], g = data[i+1], b = data[i+2];
-      let best = palette[0], min = Infinity;
+                if (mode === 'enhanced') {
+                    data[idx] = best[0];
+                    data[idx + 1] = best[1];
+                    data[idx + 2] = best[2];
+                    data[idx + 3] = 255;
+                    continue;
+                }
 
-      if (mode === 'hsv') {
-          const [h1, s1, v1] = rgbToHsv(r, g, b);
+                const oldR = r, oldG = g, oldB = b;
+                const newR = best[0], newG = best[1], newB = best[2];
 
-          for (let j = 0; j < paletteHSV.length; j++) {
-              const p = paletteHSV[j];
-              let dh = Math.abs(h1 - p.h);
-              if (dh > 0.5) dh = 1 - dh;
+                data[idx] = newR;
+                data[idx + 1] = newG;
+                data[idx + 2] = newB;
+                data[idx + 3] = 255;
 
-              const dist = (dh * 4) ** 2 + (Math.abs(s1 - p.s) * 2) ** 2 + (Math.abs(v1 - p.v) * 1) ** 2;
-              if (dist < min) { min = dist; best = p.rgb; }
-          }
-      } else {
+                const errR = oldR - newR;
+                const errG = oldG - newG;
+                const errB = oldB - newB;
 
-          for (let j = 0; j < palette.length; j++) {
-              const [pr, pg, pb] = palette[j];
-              let dist;
-              if (mode === 'euclidean') {
-                  const dr = r - pr, dg = g - pg, db = b - pb;
-                  dist = dr * dr + dg * dg + db * db;
-              } else {
-                  const rmean = (r + pr) >> 1;
-                  const dr = r - pr, dg = g - pg, db = b - pb;
-                  dist = (((512 + rmean) * dr * dr) >> 8) + 4 * dg * dg + (((767 - rmean) * db * db) >> 8);
-              }
-              if (dist < min) { min = dist; best = palette[j]; }
-          }
-      }
-      data[i] = best[0]; data[i+1] = best[1]; data[i+2] = best[2]; data[i+3] = 255;
-    }
+                const x = i % width;
+                const y = Math.floor(i / width);
+
+                const distributeError = (dx, dy, factor) => {
+                    if (x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height) {
+                        const nIdx = ((y + dy) * width + (x + dx)) * 4;
+
+                        if (data[nIdx + 3] >= 128) {
+                            data[nIdx] += errR * factor;
+                            data[nIdx + 1] += errG * factor;
+                            data[nIdx + 2] += errB * factor;
+                        }
+                    }
+                };
+
+                if (mode === 'photorealistic') {
+                    distributeError(1, 0, 7 / 16);
+                    distributeError(-1, 1, 3 / 16);
+                    distributeError(0, 1, 5 / 16);
+                    distributeError(1, 1, 1 / 16);
+                }
+
+                else {
+                    distributeError(1, 0, 1 / 8);
+                    distributeError(2, 0, 1 / 8);
+                    distributeError(-1, 1, 1 / 8);
+                    distributeError(0, 1, 1 / 8);
+                    distributeError(1, 1, 1 / 8);
+                    distributeError(0, 2, 1 / 8);
+                }
+            }
+
+            pixelIndex = end;
+            if (pixelIndex < data.length / 4) {
+                setTimeout(processChunk, 0);
+            } else {
+                resolve();
+            }
+        };
+        processChunk();
+    });
+
     ctx.putImageData(imageData, 0, 0);
     return canvas.toDataURL('image/png');
-  }
+}
 
   async function setOverlayImageFromURL(ov, url) {
     const mode = document.getElementById('op-color-mode').value;
@@ -1593,7 +1689,7 @@ async function processImageToPalette(base64, mode = 'perceptual') {
     config.autoCapturePixelUrl = true; await saveConfig(['autoCapturePixelUrl']);
     ensureHook(); updateUI();
 
-    document.getElementById('op-color-mode').value = 'perceptual';
+    document.getElementById('op-color-mode').value = 'standard';
 
     showToast(`Imagen procesada y cargada. Haz clic para establecer el ancla.`);
   }
@@ -1619,7 +1715,7 @@ async function setOverlayImageFromFile(ov, file) {
     config.autoCapturePixelUrl = true; await saveConfig(['autoCapturePixelUrl']);
     ensureHook(); updateUI();
 
-    document.getElementById('op-color-mode').value = 'perceptual';
+    document.getElementById('op-color-mode').value = 'standard';
 
     showToast(`Imagen local procesada. Haz clic para establecer el ancla.`);
   }
@@ -2134,6 +2230,35 @@ applyTheme();
     $('op-ca-show-progress-toggle').addEventListener('click', createViewToggleHandler('caShowProgress', true));
     $('op-ca-show-remaining-toggle').addEventListener('click', createViewToggleHandler('caShowRemainingOnly', true));
 
+    const dropdown = $('op-mode-dropdown');
+    const trigger = $('op-mode-trigger');
+    const hiddenInput = $('op-color-mode');
+    const triggerText = $('op-mode-text');
+    const options = dropdown.querySelectorAll('.op-option');
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.op-custom-select.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+        dropdown.classList.toggle('open');
+    });
+
+    options.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            options.forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            const val = opt.dataset.value;
+            const text = opt.innerText.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]\s+/, '');
+            hiddenInput.value = val;
+            let displayMode = 'BlueMarble';
+            if(val === 'enhanced') displayMode = 'Pixel Art';
+            if(val === 'photorealistic') displayMode = 'Dithering';
+            triggerText.textContent = text.split('(')[0].trim() + ' (' + displayMode + ')';
+            dropdown.classList.remove('open');
+        });
+    });
+
+    window.addEventListener('click', () => { if (dropdown) dropdown.classList.remove('open'); });
 }
 
     function getAvailableColors() {
