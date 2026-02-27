@@ -182,7 +182,7 @@ const DONATORS = [
   }
   function matchTileUrl(urlStr) {
     try { const u = new URL(urlStr, location.href);
-      if (u.hostname !== 'backend.wplace.live' || !u.pathname.startsWith('/tile/')) return null;
+      if (u.hostname !== 'backend.wplace.live' || !(u.pathname.startsWith('/files/') || u.pathname.startsWith('/tile/'))) return null;
       const m = u.pathname.match(/\/(\d+)\/(\d+)\.png$/i);
       if (!m) return null;
       return { chunk1: parseInt(m[1], 10), chunk2: parseInt(m[2], 10) };
