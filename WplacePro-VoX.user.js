@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wplace Overlay Pro Modified By @SrCratier
 // @namespace    http://tampermonkey.net/
-// @version      5.2.4
+// @version      5.2.5
 // @description  Overlays tiles on wplace.live. Can also resize, and color-match your overlay to wplace's palette. Make sure to comply with the site's Terms of Service, and rules! This script is not affiliated with Wplace.live in any way, use at your own risk. This script is not affiliated with TamperMonkey. The author of this userscript is not responsible for any damages, issues, loss of data, or punishment that may occur as a result of using this script. This script is provided "as is" under GPLv3.
 // @author       shinkonet (Modificado por @SrCratier)
 // @updateURL    https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js
@@ -158,7 +158,7 @@ const DONATORS = [
     let i = 1; while (names.has(`${base} (${i})`.toLowerCase())) i++; return `${base} (${i})`;
   }
 
-  function createCanvas(w, h) { if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h); const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+  function createCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
   function createHTMLCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
   function canvasToBlob(canvas) { if (canvas.convertToBlob) return canvas.convertToBlob(); return new Promise((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Error("toBlob failed")), "image/png")); }
   async function canvasToDataURLSafe(canvas) {
@@ -275,11 +275,10 @@ const DONATORS = [
             if (isMatch) {
                 data[i + 3] = 0;
             } else {
-                const bg_r = 237, bg_g = 28, bg_b = 36;
-                const alpha = 0.5;
-                data[i] = Math.round(r_ov * (1 - alpha) + bg_r * alpha);
-                data[i + 1] = Math.round(g_ov * (1 - alpha) + bg_g * alpha);
-                data[i + 2] = Math.round(b_ov * (1 - alpha) + bg_b * alpha);
+                const alpha = 0.6;
+                data[i] = Math.round(r_ov * (1 - alpha) + 255 * alpha);
+                data[i + 1] = Math.round(g_ov * (1 - alpha) + 0 * alpha);
+                data[i + 2] = Math.round(b_ov * (1 - alpha) + 255 * alpha);
                 data[i + 3] = 255;
             }
         } else if (config.highlightMissing && originalTileImageData) {
@@ -304,6 +303,7 @@ const DONATORS = [
     }
     const result = { imageData, dx: isect.x, dy: isect.y };
     overlayCache.set(cacheKey, result);
+    if (overlayCache.size > 60) overlayCache.delete(overlayCache.keys().next().value);
     return result;
   }
 
@@ -401,7 +401,12 @@ const DONATORS = [
     const center = Math.floor(scale / 2);
     const width = isect.w;
     const isErrorCheckMode = config.showErrors && originalTileImageData;
-    const errorCache = new Map();
+
+    const origW = Math.ceil(width / scale);
+    const origH = Math.ceil(isect.h / scale);
+    const errorCache = isErrorCheckMode ? new Uint8Array(origW * origH) : null;
+    const errorCalculated = isErrorCheckMode ? new Uint8Array(origW * origH) : null;
+    
     const filterSet = (ov.filterActive && ov.savedFilters) ? new Set(ov.savedFilters) : null;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -427,10 +432,11 @@ const DONATORS = [
       if (isErrorCheckMode) {
           const originalX = Math.floor(absX / scale);
           const originalY = Math.floor(absY / scale);
-          const blockKey = `${originalX},${originalY}`;
+          const cacheIdx = originalY * origW + originalX;
           let isMatch = false;
-          if (errorCache.has(blockKey)) {
-              isMatch = errorCache.get(blockKey);
+
+          if (errorCalculated[cacheIdx]) {
+              isMatch = errorCache[cacheIdx] === 1;
           } else {
               const originalIndex = (originalY * TILE_SIZE + originalX) * 4;
               const r_orig = originalTileImageData.data[originalIndex];
@@ -445,15 +451,24 @@ const DONATORS = [
               } else {
                   isMatch = (a_orig > 100) && isColorSimilar(r_ov, g_ov, b_ov, r_orig, g_orig, b_orig);
               }
+              errorCache[cacheIdx] = isMatch ? 1 : 0;
+              errorCalculated[cacheIdx] = 1;
           }
+          
           if (isMatch) {
               data[i+3] = 0;
               continue;
           } else {
               if (shouldDrawPattern) {
-                  data[i] = r_ov; data[i+1] = g_ov; data[i+2] = b_ov; data[i+3] = 255;
+                  data[i] = r_ov;
+                  data[i+1] = g_ov;
+                  data[i+2] = b_ov;
+                  data[i+3] = 255;
               } else {
-                  data[i] = 237; data[i+1] = 28; data[i+2] = 36; data[i+3] = 255;
+                  data[i] = 255;
+                  data[i+1] = 0;
+                  data[i+2] = 255;
+                  data[i+3] = 255;
               }
           }
       } else {
@@ -470,6 +485,7 @@ const DONATORS = [
 
     const result = { imageData, dx: isect.x, dy: isect.y, scaled: true, scale };
     overlayCache.set(cacheKey, result);
+    if (overlayCache.size > 60) overlayCache.delete(overlayCache.keys().next().value);
     return result;
   }
 
@@ -609,6 +625,9 @@ function showToast(message, duration = 3000) {
     const originalFetch = NATIVE_FETCH;
     const hookedFetch = async (input, init) => {
         const urlStr = typeof input === 'string' ? input : (input && input.url) || '';
+        
+        if (!urlStr.includes('backend.wplace.live')) return originalFetch(input, init);
+
         const pixelMatch = matchPixelUrl(urlStr);
         if (pixelMatch) {
             if (config.autoCapturePixelUrl && config.activeOverlayId) {
@@ -734,7 +753,8 @@ function showToast(message, duration = 3000) {
   function detachHook() { if (!hookInstalled) return; page.fetch = NATIVE_FETCH; window.fetch = NATIVE_FETCH; hookInstalled = false; }
 
   const config = {
-    overlays: [],
+    language: 'en',
+    overlays:[],
     activeOverlayId: null,
     overlayMode: 'minify',
     isPanelCollapsed: false,
@@ -770,6 +790,43 @@ function showToast(message, duration = 3000) {
     lastKnownColors: []
   };
   const CONFIG_KEYS = Object.keys(config);
+  const i18n = {
+    en: {
+        title: "VoX - Overlay Pro", settings: "Settings", toggle: "Toggle Panel",
+        overlayBtn: "Overlay", modeBtn: "Mode", errorsBtn: "Show Errors", posBtn: "Set Position",
+        tabOverlays: "Overlays", tabEditor: "Editor", tabTools: "Tools",
+        add: "+ Add", import: "Import", export: "Export",
+        editorPlaceholder: "Select an overlay to edit.", name: "Name", mode: "Mode",
+        modeStd: "Standard (Recommended)", modeEnh: "Enhanced (Pixel Art)", modePho: "Photorealistic (Dithering)",
+        image: "Image", load: "Load", dropzone: "Drag here or click to browse.",
+        opacity: "Opacity", offsetX: "Offset X", offsetY: "Y",
+        copyCanvas: "Copy Canvas", setPointA: "Set Point A", setPointB: "Set Point B",
+        fineTune: "Fine Tune:", pointA: "Point A", pointB: "Point B",
+        previewArea: "Preview Area", download: "Download", showProgress: "Show Overlay Progress",
+        genSettings: "General Settings", uiTheme: "UI Theme", lightDark: "Light / Dark",
+        panelAlpha: "Panel Transparency",
+        support: "This project is free, but I would appreciate a donation to support development ❤️",
+        thanks: "❤️ See Acknowledgements", langToggle: "ES"
+    },
+    es: {
+        title: "VoX - Overlay Pro", settings: "Ajustes", toggle: "Plegar/Desplegar",
+        overlayBtn: "Overlay", modeBtn: "Modo", errorsBtn: "Mostrar Errores", posBtn: "Fijar Posición",
+        tabOverlays: "Overlays", tabEditor: "Editor", tabTools: "Herramientas",
+        add: "+ Añadir", import: "Importar", export: "Exportar",
+        editorPlaceholder: "Selecciona un overlay para editarlo.", name: "Nombre", mode: "Modo",
+        modeStd: "Estándar (Recomendado)", modeEnh: "Mejorado (Pixel Art)", modePho: "Fotorealista (Dithering)",
+        image: "Imagen", load: "Cargar", dropzone: "Arrastra aquí o haz clic para buscar.",
+        opacity: "Opacidad", offsetX: "Offset X", offsetY: "Y",
+        copyCanvas: "Copiar Lienzo", setPointA: "Fijar Punto A", setPointB: "Fijar Punto B",
+        fineTune: "Ajuste Fino:", pointA: "Punto A", pointB: "Punto B",
+        previewArea: "Visualizar Área", download: "Descargar", showProgress: "Mostrar Progreso del Overlay",
+        genSettings: "Ajustes Generales", uiTheme: "Tema de la Interfaz", lightDark: "Claro / Oscuro",
+        panelAlpha: "Transparencia del Panel",
+        support: "Este proyecto es gratuito, pero agradecería una donación para apoyar el desarrollo ❤️",
+        thanks: "❤️ Ver Agradecimientos", langToggle: "EN"
+    }
+  };
+  function t(key) { return i18n[config.language][key] || key; }
 
   async function loadConfig() {
     try {
@@ -1188,33 +1245,33 @@ function injectStyles() {
 
 panel.innerHTML = `
   <div class="op-header" id="op-header">
-    <h3>VoX - Overlay Pro<span style="font-size: 13px; color: var(--op-muted); font-weight: 500; margin-left: 8px;">-_-/</span></h3>
+    <h3>${t('title')}<span style="font-size: 13px; color: var(--op-muted); font-weight: 500; margin-left: 8px;">-_-/</span></h3>
     <div class="op-header-actions">
-        <button class="op-hdr-btn" id="op-main-settings-btn" title="Ajustes">⚙️</button>
-        <button class="op-toggle-btn" id="op-panel-toggle" title="Plegar/Desplegar">▾</button>
+        <button class="op-hdr-btn" id="op-lang-toggle" title="EN/ES">${t('langToggle')}</button>
+        <button class="op-hdr-btn" id="op-main-settings-btn" title="${t('settings')}">⚙️</button>
+        <button class="op-toggle-btn" id="op-panel-toggle" title="${t('toggle')}">▾</button>
     </div>
   </div>
       <div class="op-content" id="op-content">
         <div class="op-global-controls">
-            <button class="op-button" id="op-show-overlay-toggle">Overlay: ON</button>
-            <button class="op-button" id="op-mode-toggle">Mode: Minify</button>
-            <button class="op-button" id="op-show-errors-toggle">Show Errors: OFF</button>
-            <button class="op-button" id="op-autocap-toggle">Set Position: OFF</button>
-
+            <button class="op-button" id="op-show-overlay-toggle">${t('overlayBtn')}: ON</button>
+            <button class="op-button" id="op-mode-toggle">${t('modeBtn')}: Minify</button>
+            <button class="op-button" id="op-show-errors-toggle">${t('errorsBtn')}: OFF</button>
+            <button class="op-button" id="op-autocap-toggle">${t('posBtn')}: OFF</button>
         </div>
 
         <div class="op-tabs">
-            <button class="op-tab-btn active" data-tab="overlays">Overlays</button>
-            <button class="op-tab-btn" data-tab="editor">Editor</button>
-            <button class="op-tab-btn" data-tab="tools">Herramientas</button>
+            <button class="op-tab-btn active" data-tab="overlays">${t('tabOverlays')}</button>
+            <button class="op-tab-btn" data-tab="editor">${t('tabEditor')}</button>
+            <button class="op-tab-btn" data-tab="tools">${t('tabTools')}</button>
         </div>
 
         <div class="op-tab-panes op-section" style="padding-top: 12px; border-top-left-radius: 0;">
             <div class="op-tab-pane active" data-pane="overlays">
                 <div class="op-row space">
-                    <button class="op-button" id="op-add-overlay" title="Crear una nueva superposición">+ Add</button>
-                    <button class="op-button" id="op-import-overlay" title="Importar superposición desde JSON">Import</button>
-                    <button class="op-button" id="op-export-overlay" title="Exportar superposición activa a JSON">Export</button>
+                    <button class="op-button" id="op-add-overlay">${t('add')}</button>
+                    <button class="op-button" id="op-import-overlay">${t('import')}</button>
+                    <button class="op-button" id="op-export-overlay">${t('export')}</button>
                 </div>
                 <div class="op-list" id="op-overlay-list"></div>
                             <div id="op-list-preview-area" style="display: none; margin-top: 8px;">
@@ -1226,32 +1283,32 @@ panel.innerHTML = `
 
             <div class="op-tab-pane" data-pane="editor">
                 <div id="op-editor-placeholder" class="op-muted" style="text-align:center; padding: 20px;">
-                    Selecciona un overlay para editarlo.
+                    ${t('editorPlaceholder')}
                 </div>
                 <div id="op-editor-content" style="display:none; flex-direction:column; gap: 12px;">
                     <div>
                         <div class="op-row">
-                            <label style="width: 60px;">Nombre</label>
+                            <label style="width: 60px;">${t('name')}</label>
                             <input type="text" class="op-input op-grow" id="op-name">
                         </div>
                     </div>
                     <div>
                         <div class="op-row">
-                            <label style="width: 60px;">Modo</label>
+                            <label style="width: 60px;">${t('mode')}</label>
                             <div class="op-custom-select" id="op-mode-dropdown">
                                 <input type="hidden" id="op-color-mode" value="standard">
                                 <div class="op-select-trigger" id="op-mode-trigger">
-                                    <span id="op-mode-text">Estándar (Recomendado)</span>
+                                    <span id="op-mode-text">${t('modeStd')}</span>
                                 </div>
                                 <div class="op-select-options">
                                     <div class="op-option selected" data-value="standard">
-                                        <span>•</span> Estándar (Recomendado)
+                                        <span>•</span> ${t('modeStd')}
                                     </div>
                                     <div class="op-option" data-value="enhanced">
-                                        <span>•</span> Mejorado (Dibujos/Pixel Art)
+                                        <span>•</span> ${t('modeEnh')}
                                     </div>
                                     <div class="op-option" data-value="photorealistic">
-                                        <span>•</span> Fotorealista (Dithering Fuerte)
+                                        <span>•</span> ${t('modePho')}
                                     </div>
                                 </div>
                             </div>
@@ -1260,12 +1317,12 @@ panel.innerHTML = `
                     <div>
                         <div id="op-image-source">
                             <div class="op-row">
-                                <label style="width: 60px;">Imagen</label>
-                                <input type="text" class="op-input op-grow" id="op-image-url" placeholder="Pega un enlace de imagen">
-                                <button class="op-button" id="op-fetch">Cargar</button>
+                                <label style="width: 60px;">${t('image')}</label>
+                                <input type="text" class="op-input op-grow" id="op-image-url" placeholder="URL">
+                                <button class="op-button" id="op-fetch">${t('load')}</button>
                             </div>
                             <div class="op-preview" id="op-dropzone" style="margin-top:8px;">
-                                <div class="op-drop-hint">Arrastra aquí o haz clic para buscar.</div>
+                                <div class="op-drop-hint">${t('dropzone')}</div>
                                 <input type="file" id="op-file-input" accept="image/*" style="display:none">
                             </div>
                         </div>
@@ -1281,19 +1338,19 @@ panel.innerHTML = `
                     <div>
                       <div class="op-row"><span class="op-muted" id="op-coord-display"></span></div>
                       <div class="op-row" style="width: 100%; gap: 12px; padding: 6px 0;">
-                        <label style="width: 60px;">Opacidad</label>
+                        <label style="width: 60px;">${t('opacity')}</label>
                         <input type="range" min="0" max="1" step="0.05" class="op-slider op-grow" id="op-opacity-slider">
                         <span id="op-opacity-value" style="width: 36px; text-align: right;">100%</span>
                       </div>
                     </div>
                     <div>
                         <div class="op-row space">
-                         <span class="op-muted" id="op-offset-indicator">Offset X 0, Y 0</span>
+                         <span class="op-muted" id="op-offset-indicator">${t('offsetX')} 0, ${t('offsetY')} 0</span>
                           <div class="op-nudge-controls" style="text-align: right;">
-                            <button class="op-icon-btn" id="op-nudge-left" title="Izquierda">←</button>
-                            <button class="op-icon-btn" id="op-nudge-down" title="Abajo">↓</button>
-                            <button class="op-icon-btn" id="op-nudge-up" title="Arriba">↑</button>
-                           <button class="op-icon-btn" id="op-nudge-right" title="Derecha">→</button>
+                            <button class="op-icon-btn" id="op-nudge-left" title="Left">←</button>
+                            <button class="op-icon-btn" id="op-nudge-down" title="Down">↓</button>
+                            <button class="op-icon-btn" id="op-nudge-up" title="Up">↑</button>
+                           <button class="op-icon-btn" id="op-nudge-right" title="Right">→</button>
                         </div>
                       </div>
                     </div>
@@ -1302,43 +1359,43 @@ panel.innerHTML = `
 
             <div class="op-tab-pane" data-pane="tools">
                 <div>
-                    <span style="font-weight:600; text-align:center; margin-bottom: 8px;">Copiar Lienzo</span>
+                    <span style="font-weight:600; text-align:center; margin-bottom: 8px; display:block;">${t('copyCanvas')}</span>
                     <div class="op-row space" style="margin-bottom: 10px;">
-                        <button class="op-button" id="op-copy-set-a">Fijar Punto A</button>
-                        <span class="op-muted" id="op-copy-a-coords">No fijado</span>
+                        <button class="op-button" id="op-copy-set-a">${t('setPointA')}</button>
+                        <span class="op-muted" id="op-copy-a-coords">---</span>
                     </div>
                     <div class="op-row space">
-                        <button class="op-button" id="op-copy-set-b">Fijar Punto B</button>
-                        <span class="op-muted" id="op-copy-b-coords">No fijado</span>
+                        <button class="op-button" id="op-copy-set-b">${t('setPointB')}</button>
+                        <span class="op-muted" id="op-copy-b-coords">---</span>
                     </div>
                     <div class="op-row space" style="margin-top: 8px;">
                         <span id="op-copy-info" class="op-muted" style="text-align:center; width:100%;"></span>
                     </div>
                      <div class="op-section" style="margin-top: 8px;">
                          <div class="op-row space">
-                             <span>Ajuste Fino:</span>
+                             <span>${t('fineTune')}</span>
                              <div class="op-row">
                                 <input type="radio" id="op-nudge-target-a" name="op-nudge-target" value="A" checked>
-                                <label for="op-nudge-target-a">Punto A</label>
+                                <label for="op-nudge-target-a">${t('pointA')}</label>
                                 <input type="radio" id="op-nudge-target-b" name="op-nudge-target" value="B">
-                                <label for="op-nudge-target-b">Punto B</label>
+                                <label for="op-nudge-target-b">${t('pointB')}</label>
                              </div>
                          </div>
-                         <div class="op-nudge-controls" style="text-align: right;">
-                            <button class="op-icon-btn" id="op-nudge-copy-left" title="Izquierda">←</button>
-                            <button class="op-icon-btn" id="op-nudge-copy-down" title="Abajo">↓</button>
-                            <button class="op-icon-btn" id="op-nudge-copy-up" title="Arriba">↑</button>
-                            <button class="op-icon-btn" id="op-nudge-copy-right" title="Derecha">→</button>
+                         <div class="op-nudge-controls" style="text-align: right; margin-top:4px;">
+                            <button class="op-icon-btn" id="op-nudge-copy-left" title="Left">←</button>
+                            <button class="op-icon-btn" id="op-nudge-copy-down" title="Down">↓</button>
+                            <button class="op-icon-btn" id="op-nudge-copy-up" title="Up">↑</button>
+                            <button class="op-icon-btn" id="op-nudge-copy-right" title="Right">→</button>
                          </div>
                     </div>
-                    <div class="op-row space" style="margin-top: 4px;">
-                        <button class="op-button" id="op-copy-preview-toggle" style="flex:1;">Visualizar Área</button>
-                        <button class="op-button" id="op-copy-create" style="flex:1;" title="Detecta y descarga una imagen del área seleccionada.">Descargar</button>
+                    <div class="op-row space" style="margin-top: 8px;">
+                        <button class="op-button" id="op-copy-preview-toggle" style="flex:1;">${t('previewArea')}</button>
+                        <button class="op-button" id="op-copy-create" style="flex:1;">${t('download')}</button>
                     </div>
                 </div>
 
                 <div id="op-color-analysis-section" class="op-section" style="margin-top: 12px; padding: 12px; align-items: center;">
-                    <button class="op-button" id="op-analyze-colors-btn" style="width: 100%;">Mostrar Progreso del Overlay</button>
+                    <button class="op-button" id="op-analyze-colors-btn" style="width: 100%;">${t('showProgress')}</button>
                 </div>
 
             </div>
@@ -1352,17 +1409,17 @@ panel.innerHTML = `
     settingsModal.id = 'op-main-settings-modal';
     settingsModal.className = 'op-modal';
     settingsModal.innerHTML = `
-        <h3>Ajustes Generales</h3>
+        <h3>${t('genSettings')}</h3>
         <div class="op-settings-row">
-            <span>Tema de la Interfaz</span>
-            <button class="op-button" id="op-theme-toggle">Claro / Oscuro</button>
+            <span>${t('uiTheme')}</span>
+            <button class="op-button" id="op-theme-toggle">${t('lightDark')}</button>
         </div>
         <div class="op-settings-row">
-            <label>Transparencia del Panel</label>
+            <label>${t('panelAlpha')}</label>
         </div>
         <input type="range" id="op-panel-alpha-slider" min="0.4" max="1" step="0.05">
         <div class="op-donation-section">
-            <p>Este proyecto es gratuito, pero agradecería una donación para apoyar el desarrollo ❤️</p>
+            <p>${t('support')}</p>
             <div class="op-donation-info">
                 <span>Binance ID:</span>
                 <code>851390091</code>
@@ -1372,7 +1429,7 @@ panel.innerHTML = `
                 <code>@srcratier</code>
             </div>
         </div>
-         <button class="op-button op-show-donators">❤️ Ver Agradecimientos</button>
+         <button class="op-button op-show-donators">${t('thanks')}</button>
          <div class="op-donators-list-wrap"></div>
     `;
     document.body.appendChild(settingsModal);
@@ -1555,120 +1612,104 @@ async function processImageToPalette(base64, mode = 'standard') {
     ctx.drawImage(img, 0, 0);
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const width = canvas.width;
-    const height = canvas.height;
-
     const palette = [...WPLACE_FREE, ...WPLACE_PAID];
 
-    const getNearestColor = (r, g, b) => {
-        let minInfo = Infinity;
-        let bestColor = palette[0];
+    return new Promise((resolve, reject) => {
+        const workerCode = `
+            self.onmessage = function(e) {
+                const { imgBuffer, width, height, mode, palette } = e.data;
+                const data = new Uint8ClampedArray(imgBuffer);
 
-        for (let i = 0; i < palette.length; i++) {
-            const p = palette[i];
-            const pr = p[0], pg = p[1], pb = p[2];
-
-            const rmean = (r + pr) * 0.5;
-            const dr = r - pr;
-            const dg = g - pg;
-            const db = b - pb;
-
-            const dist = (((512 + rmean) * dr * dr) >> 8) + (4 * dg * dg) + (((767 - rmean) * db * db) >> 8);
-
-            if (dist < minInfo) {
-                minInfo = dist;
-                bestColor = p;
-            }
-        }
-        return bestColor;
-    };
-
-    const CHUNK_SIZE = 50000;
-    let pixelIndex = 0;
-
-    await new Promise(resolve => {
-        const processChunk = () => {
-            const end = Math.min(pixelIndex + CHUNK_SIZE, data.length / 4);
-
-            for (let i = pixelIndex; i < end; i++) {
-                const idx = i * 4;
-                const r = data[idx];
-                const g = data[idx + 1];
-                const b = data[idx + 2];
-                const a = data[idx + 3];
-
-                if (a < 128) {
-                    data[idx + 3] = 0;
-                    continue;
-                }
-
-                const best = getNearestColor(r, g, b);
-
-                if (mode === 'enhanced') {
-                    data[idx] = best[0];
-                    data[idx + 1] = best[1];
-                    data[idx + 2] = best[2];
-                    data[idx + 3] = 255;
-                    continue;
-                }
-
-                const oldR = r, oldG = g, oldB = b;
-                const newR = best[0], newG = best[1], newB = best[2];
-
-                data[idx] = newR;
-                data[idx + 1] = newG;
-                data[idx + 2] = newB;
-                data[idx + 3] = 255;
-
-                const errR = oldR - newR;
-                const errG = oldG - newG;
-                const errB = oldB - newB;
-
-                const x = i % width;
-                const y = Math.floor(i / width);
-
-                const distributeError = (dx, dy, factor) => {
-                    if (x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height) {
-                        const nIdx = ((y + dy) * width + (x + dx)) * 4;
-
-                        if (data[nIdx + 3] >= 128) {
-                            data[nIdx] += errR * factor;
-                            data[nIdx + 1] += errG * factor;
-                            data[nIdx + 2] += errB * factor;
+                const getNearestColor = (r, g, b) => {
+                    let minInfo = Infinity;
+                    let bestColor = palette[0];
+                    for (let i = 0; i < palette.length; i++) {
+                        const p = palette[i];
+                        const pr = p[0], pg = p[1], pb = p[2];
+                        const rmean = (r + pr) * 0.5;
+                        const dr = r - pr;
+                        const dg = g - pg;
+                        const db = b - pb;
+                        const dist = (((512 + rmean) * dr * dr) >> 8) + (4 * dg * dg) + (((767 - rmean) * db * db) >> 8);
+                        if (dist < minInfo) {
+                            minInfo = dist;
+                            bestColor = p;
                         }
                     }
+                    return bestColor;
                 };
 
-                if (mode === 'photorealistic') {
-                    distributeError(1, 0, 7 / 16);
-                    distributeError(-1, 1, 3 / 16);
-                    distributeError(0, 1, 5 / 16);
-                    distributeError(1, 1, 1 / 16);
-                }
+                for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+                    if (a < 128) {
+                        data[i + 3] = 0;
+                        continue;
+                    }
 
-                else {
-                    distributeError(1, 0, 1 / 8);
-                    distributeError(2, 0, 1 / 8);
-                    distributeError(-1, 1, 1 / 8);
-                    distributeError(0, 1, 1 / 8);
-                    distributeError(1, 1, 1 / 8);
-                    distributeError(0, 2, 1 / 8);
-                }
-            }
+                    const best = getNearestColor(r, g, b);
 
-            pixelIndex = end;
-            if (pixelIndex < data.length / 4) {
-                setTimeout(processChunk, 0);
-            } else {
-                resolve();
-            }
+                    if (mode === 'enhanced') {
+                        data[i] = best[0]; data[i + 1] = best[1]; data[i + 2] = best[2]; data[i + 3] = 255;
+                        continue;
+                    }
+
+                    const oldR = r, oldG = g, oldB = b;
+                    const newR = best[0], newG = best[1], newB = best[2];
+
+                    data[i] = newR; data[i + 1] = newG; data[i + 2] = newB; data[i + 3] = 255;
+
+                    const errR = oldR - newR, errG = oldG - newG, errB = oldB - newB;
+                    const x = (i / 4) % width;
+                    const y = Math.floor((i / 4) / width);
+
+                    const distributeError = (dx, dy, factor) => {
+                        if (x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height) {
+                            const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                            if (data[nIdx + 3] >= 128) {
+                                data[nIdx] += errR * factor;
+                                data[nIdx + 1] += errG * factor;
+                                data[nIdx + 2] += errB * factor;
+                            }
+                        }
+                    };
+
+                    if (mode === 'photorealistic') {
+                        distributeError(1, 0, 7 / 16); distributeError(-1, 1, 3 / 16); distributeError(0, 1, 5 / 16); distributeError(1, 1, 1 / 16);
+                    } else {
+                        distributeError(1, 0, 1 / 8); distributeError(2, 0, 1 / 8); distributeError(-1, 1, 1 / 8); distributeError(0, 1, 1 / 8); distributeError(1, 1, 1 / 8); distributeError(0, 2, 1 / 8);
+                    }
+                }
+                
+                // Devolvemos el buffer procesado al hilo principal
+                self.postMessage({ resultBuffer: data.buffer }, [data.buffer]);
+            };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+
+        worker.onmessage = function(e) {
+            const processedData = new Uint8ClampedArray(e.data.resultBuffer);
+            const newImageData = new ImageData(processedData, canvas.width, canvas.height);
+            ctx.putImageData(newImageData, 0, 0);
+            worker.terminate();
+            resolve(canvas.toDataURL('image/png'));
         };
-        processChunk();
-    });
 
-    ctx.putImageData(imageData, 0, 0);
-    return canvas.toDataURL('image/png');
+        worker.onerror = function(err) {
+            console.error("Error en el Web Worker:", err);
+            worker.terminate();
+            reject(err);
+        };
+
+        worker.postMessage({
+            imgBuffer: imageData.data.buffer,
+            width: canvas.width,
+            height: canvas.height,
+            mode: mode,
+            palette: palette
+        }, [imageData.data.buffer]);
+    });
 }
 
   async function setOverlayImageFromURL(ov, url) {
@@ -1867,6 +1908,12 @@ async function setOverlayImageFromFile(ov, file) {
 function addEventListeners() {
     const $ = (id) => document.getElementById(id);
 
+    $('op-lang-toggle').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        config.language = config.language === 'en' ? 'es' : 'en';
+        await saveConfig(['language']);
+        location.reload();
+    });
     $('op-theme-toggle').addEventListener('click', async (e) => {
         e.stopPropagation();
         config.theme = config.theme === 'light' ? 'dark' : 'light';
@@ -1878,6 +1925,19 @@ applyTheme();
     $('op-panel-toggle').addEventListener('click', (e) => { e.stopPropagation(); config.isPanelCollapsed = !config.isPanelCollapsed; saveConfig(['isPanelCollapsed']); updateUI(); });
 
     $('op-show-overlay-toggle').addEventListener('click', () => {
+        if (config.autoCapturePixelUrl) {
+            showToast('⚠️ No puedes apagar el Overlay mientras "Set Position" está activo.', 3000);
+            return;
+        }
+        if (config.isSettingCopyPoint) {
+            showToast('⚠️ No puedes apagar el Overlay mientras fijas un punto de copia.', 3000);
+            return;
+        }
+        if (config.copyPreviewActive) {
+            showToast('⚠️ Desactiva "Visualizar Área" primero para controlar el Overlay manualmente.', 3000);
+            return;
+        }
+
         config.showOverlay = !config.showOverlay;
         saveConfig(['showOverlay']);
         clearOverlayCache();
@@ -2053,11 +2113,24 @@ applyTheme();
         openRSModal(ov);
     });
 
-    const setCopyPoint = (point) => {
+    const setCopyPoint = async (point) => {
         config.isSettingCopyPoint = point;
-        if (point) config.autoCapturePixelUrl = false;
-        saveConfig(['isSettingCopyPoint', 'autoCapturePixelUrl']);
-        showToast(`Haz clic en el lienzo para fijar el punto ${point}`);
+        const keysToSave = ['isSettingCopyPoint'];
+        
+        if (point) {
+            config.autoCapturePixelUrl = false;
+            keysToSave.push('autoCapturePixelUrl');
+            
+            if (config.copyPreviewActive) {
+                config.copyPreviewActive = false;
+                config.showOverlay = overlayStateBeforePreview;
+                keysToSave.push('copyPreviewActive', 'showOverlay');
+                clearOverlayCache();
+            }
+        }
+        
+        await saveConfig(keysToSave);
+        showToast(point ? `Haz clic en el lienzo para fijar el punto ${point}` : 'Selección cancelada.');
         updateUI();
         ensureHook();
     };
@@ -2342,24 +2415,37 @@ async function updateOverlayProgress() {
             tileKeys.add(`${Math.floor(absX / TILE_SIZE)}/${Math.floor(absY / TILE_SIZE)}`);
         }
 
-        tileKeys.forEach(tileKey => {
-            if (tileDataCache.has(tileKey)) {
+        for (let y = 0; y < img.height; y++) {
+            for (let x = 0; x < img.width; x++) {
+                const i = (y * img.width + x) * 4;
+                if (data[i + 3] < 200) continue;
+
+                const absX = overlayBaseX + x;
+                const absY = overlayBaseY + y;
+                const chunk1 = Math.floor(absX / TILE_SIZE);
+                const chunk2 = Math.floor(absY / TILE_SIZE);
+                const tileKey = `${chunk1}/${chunk2}`;
+
                 const tileImageData = tileDataCache.get(tileKey);
-                for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) {
-                    const i = (y * img.width + x) * 4;
-                    if (data[i + 3] < 200) continue;
-                    const neededColorKey = `${data[i]},${data[i+1]},${data[i+2]}`;
-                    const absX = overlayBaseX + x, absY = overlayBaseY + y;
-                    const chunk1 = Math.floor(absX/TILE_SIZE), chunk2 = Math.floor(absY/TILE_SIZE);
-                    if (`${chunk1}/${chunk2}` !== tileKey) continue;
-                    const tileX = absX % TILE_SIZE, tileY = absY % TILE_SIZE;
+                if (tileImageData) {
+                    const tileX = absX % TILE_SIZE;
+                    const tileY = absY % TILE_SIZE;
                     const tileIdx = (tileY * TILE_SIZE + tileX) * 4;
-                    if (tileImageData.data[tileIdx+3] > 200 && `${tileImageData.data[tileIdx]},${tileImageData.data[tileIdx+1]},${tileImageData.data[tileIdx+2]}` === neededColorKey) {
-                        colorData.get(neededColorKey).placed++;
+
+                    if (tileImageData.data[tileIdx + 3] > 200) {
+                        const r_ov = data[i], g_ov = data[i+1], b_ov = data[i+2];
+                        const r_map = tileImageData.data[tileIdx], g_map = tileImageData.data[tileIdx+1], b_map = tileImageData.data[tileIdx+2];
+
+                        if (r_ov === r_map && g_ov === g_map && b_ov === b_map) {
+                            const neededColorKey = `${r_ov},${g_ov},${b_ov}`;
+                            if (colorData.has(neededColorKey)) {
+                                colorData.get(neededColorKey).placed++;
+                            }
+                        }
                     }
                 }
             }
-        });
+        }
 
         let totalNeeded = 0, totalPlaced = 0;
         let colorsArray = Array.from(colorData.entries()).map(([key, { needed, placed }]) => {
@@ -2632,16 +2718,16 @@ function updateUI() {
     toggle.title = collapsed ? 'Expandir' : 'Plegar';
 
     const showOverlayBtn = $('op-show-overlay-toggle');
-    showOverlayBtn.textContent = `Overlay: ${config.showOverlay ? 'ON' : 'OFF'}`;
+    showOverlayBtn.textContent = `${t('overlayBtn')}: ${config.showOverlay ? 'ON' : 'OFF'}`;
     showOverlayBtn.classList.toggle('op-danger', !config.showOverlay);
 
     const modeBtn = $('op-mode-toggle');
     const modeMap = { behind: 'Behind', above: 'Above', minify: `Minify ◻`, original: 'Original' };
-    modeBtn.textContent = `Mode: ${modeMap[config.overlayMode] || 'Original'}`;
+    modeBtn.textContent = `${t('modeBtn')}: ${modeMap[config.overlayMode] || 'Original'}`;
     const autoBtn = $('op-autocap-toggle');
-    autoBtn.textContent = `Set Position: ${config.autoCapturePixelUrl ? 'ON' : 'OFF'}`;
+    autoBtn.textContent = `${t('posBtn')}: ${config.autoCapturePixelUrl ? 'ON' : 'OFF'}`;
     const showErrorBtn = $('op-show-errors-toggle');
-    showErrorBtn.textContent = `Show Errors: ${config.showErrors ? 'ON' : 'OFF'}`;
+    showErrorBtn.textContent = `${t('errorsBtn')}: ${config.showErrors ? 'ON' : 'OFF'}`;
     showErrorBtn.classList.toggle('op-danger', !!config.showErrors);
 
     setActiveTab(config.activeTab);
