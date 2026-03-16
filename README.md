@@ -1,5 +1,7 @@
 ![Banner Principal](social-preview.png)
 
+🌍 [Español](README.md) | [English](README-en.md) |[Français](README-fr.md)
+
 # VoX - Overlay Pro para Wplace
 **Basado en el código original de shinkonet, modificado y mantenido por @SrCratier.**
 
