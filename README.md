@@ -1,17 +1,15 @@
 ![Banner Principal](social-preview.png)
 
-# VoX - Overlay Pro: Guía de Usuario Completa -_- /
-**Basado en el código de shinkonet, adaptado y mejorado para Wplace.**
-**Based on shinkonet’s code, adapted and enhanced for Wplace.**
+# VoX - Overlay Pro para Wplace
+**Basado en el código original de shinkonet, modificado y mantenido por @SrCratier.**
 
-¡Bienvenido a **VoX - Overlay Pro v5.0.1**!
-Esta guía te ayudará a dominar todas las herramientas que el script pone a tu disposición. Hemos actualizado el motor para que sea más inteligente, rápido y fácil de usar.
+Un script de usuario avanzado para `wplace.live` que permite cargar, posicionar y gestionar plantillas (overlays) sobre el lienzo. Esta versión ha sido optimizada para ofrecer mayor rendimiento, precisión en la conversión de color y herramientas integradas para facilitar la creación de arte y mejorar la comodidad del usuario.
 
 ---
 
-## **1. Instalación**
+## 1. Instalación
 
-Para usar el script, primero necesitas una extensión de navegador llamada **Tampermonkey**.
+Para utilizar este script, primero necesitas instalar un gestor de scripts en tu navegador.
 
 ### Navegadores Soportados
 
@@ -20,96 +18,92 @@ Para usar el script, primero necesitas una extensión de navegador llamada **Tam
 | **PC / Mac** | Chrome, Firefox, Brave, Edge, Opera GX |
 | **Móvil (Android/iOS)** | **Microsoft Edge (Recomendado)**, Kiwi Browser |
 
-1. **Instala Tampermonkey:**
-
+### Pasos de instalación
+1. **Instala Tampermonkey** desde la tienda de extensiones de tu navegador:
    - [Tampermonkey para Chrome/Brave/Edge](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo)
    - [Tampermonkey para Firefox](https://addons.mozilla.org/es/firefox/addon/tampermonkey/)
+   > *Nota para móviles: Si usas Edge en el móvil, puedes instalar la extensión directamente desde el menú "Extensiones" del navegador.*
 
-   **📱 Nota para Móviles:** Si usas Edge en el móvil, puedes instalar la extensión directamente desde el menú "Extensiones" del navegador.
-
-2. **Instala el Script:**
-   El script está configurado para actualizarse automáticamente.
-   
-   [**⬇️ Haz clic aquí para instalar el Script (v5.0.1)**](https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js)
-
-   Tampermonkey se abrirá automáticamente y te pedirá confirmación. Dale a "Instalar".
+2. [**Haz clic aquí para instalar el script (v5.2.5)**](https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js).
+3. Tampermonkey abrirá una pestaña automáticamente pidiendo confirmación. Haz clic en **Instalar** o **Actualizar**.
 
 ---
 
-## **2. Tu Primer Overlay: Pasos Esenciales**
+## 2. Guía de Uso
 
-Sigue estos pasos para colocar tu diseño sobre el lienzo con la mejor calidad de color posible.
+Sigue estos pasos para colocar tu diseño sobre el lienzo con la mejor calidad visual posible.
 
-**Paso 1: Crear y Configurar**
-1.  Abre el panel de VoX en Wplace.
-2.  Ve a la pestaña **Overlays** y haz clic en **+ Add**.
-3.  Ve a la pestaña **Editor**.
+### A. Crear y cargar un Overlay
+1. Abre el panel de VoX en Wplace y ve a la pestaña **Overlays**.
+2. Haz clic en **+ Añadir**, se abrirá la pestaña **Editor**.
+3. Elige tu **Modo de renderizado** (ver apartado inferior) o usa el que está por defecto (recomendado).
+4. Carga tu imagen: puedes pegar una **URL directa** y hacer clic en "Cargar", o hacer clic en el área punteada para subir un **archivo local**.
 
-**Paso 2: Elegir el Modo de Color (¡NUEVO!)**
-Antes de cargar tu imagen, selecciona el **Modo** que mejor se adapte a tu diseño en el menú desplegable:
-*   **🌿 Natural:** (Por defecto) Ideal para fotografías, memes y degradados suaves.
-*   **⚡ Vibrante:** Perfecto para logotipos, textos y colores neón brillantes.
-*   **💀 Intenso (Anime):** Un modo matemático pesado que prioriza el tono exacto (HSV). Úsalo para Pixel Art complejo o Anime. (🚨Precaución : Este modo de renderizado es MUY PESADO y podría arruinar tu progreso!)
+### B. Modos de Renderizado de Color
+Al cargar una imagen, el script la convierte automáticamente a la paleta oficial de Wplace. Puedes elegir cómo se procesan estos colores:
+*   **Estándar (Recomendado):** Utiliza un algoritmo de color cercano sin generar ruido visual. Ideal para la gran mayoría de diseños, logos y formas planas.
+*   **Mejorado (Pixel Art):** Fuerza un mapeo matemático directo de color (distancia Euclidiana). Es el modo más preciso para Pixel Art estricto y bordes definidos.
+*   **Fotorealista (Dithering):** Distribuye el error de conversión de color entre los píxeles adyacentes para simular transiciones y degradados suaves. Útil principalmente para fotografías o imágenes complejas.
 
-**Paso 3: Cargar la Imagen**
-*   **Desde URL:** Pega el enlace directo y clic en **Cargar**.
-*   **Archivo Local:** Clic en el cuadro punteado para subirla desde tu dispositivo.
-    *(El script procesará los colores automáticamente para eliminar errores).*
+### C. Fijar la posición (Anclar)
+1. Con la imagen cargada, haz clic en el botón superior **Set Position: OFF** (cambiará a **ON**).
+2. Haz clic en el lienzo del juego, exactamente en el píxel donde deseas que se coloque la esquina superior izquierda (0,0) de tu imagen.
+3. El script fijará la imagen automáticamente. Puedes realizar micro-ajustes usando las flechas de desplazamiento en la sección de "Offset X / Y" dentro del Editor.
+   > *Nota: Solo fijará la imagen si tienes la paleta de colores cerrada*
 
-**Paso 4: Anclar al Lienzo**
-1.  Haz clic en el botón **Set Position: OFF** (cambiará a **ON**).
-2.  Haz clic en el lienzo del juego, exactamente en el píxel donde quieres que empiece la esquina superior izquierda (0,0) de tu imagen.
-3.  ¡Listo! La imagen se fijará.
+### D. Panel Principal y Modos de Visualización
+Desde los botones de la parte superior del panel puedes controlar cómo se proyecta tu plantilla:
+*   **Overlay (ON/OFF):** Muestra u oculta todos tus diseños cargados.
+*   **Mode:** Cambia el estilo de visualización de la plantilla:
+    *   *Minify (Recomendado):* Muestra la imagen como un patrón de puntos espaciados, permitiendo ver el lienzo original por debajo.
+    *   *Behind / Above:* Proyecta la imagen completamente sólida por detrás o por encima de los píxeles del mapa.
+    *   *Original:* Oculta temporalmente el overlay para observar el mapa real.
+*   **Show Errors (ON/OFF):** Resalta en color de contraste los píxeles del mapa que no coinciden con tu diseño.
 
----
+> **💡 Nota de rendimiento:** Si cambias la opacidad, la posición o aplicas filtros, simplemente mueve un poco el mapa o pinta un píxel para que la pantalla se actualice y refleje los cambios.
 
 ![Foto del renderizado](EJEMPLOS.png)
-## **3. Panel Principal y Modos de Visualización**
-
-- **Overlay: ON/OFF** → Muestra u oculta todos tus diseños.
-- **Mode: Minify** → Cambia la visualización del Overlay:
-  - *Minify (Recomendado):* Muestra puntos pequeños sobre el lienzo (patrón) para ver debajo.
-  - *Behind/Above:* Muestra la imagen completa detrás o delante del lienzo.
-  - *Original:* Oculta el overlay para ver el mapa real.
-- **Show Errors: ON/OFF** → Marca en rojo brillante los píxeles que no coinciden con tu diseño.
-
-> **💡 Consejo de Rendimiento:** Ya no existe el botón de "Recargar". Si cambias la opacidad, posición o filtros, el script te avisará. Solo tienes que **mover un poco el mapa** o pintar un píxel para ver los cambios.
 
 ---
 
-## **4. Funciones Avanzadas por Pestaña**
+## 3. Herramientas Adicionales
 
-### **Pestaña Overlays**
-*   **Gestión Individual:** Ahora, cada Overlay guarda su propia configuración de filtros de colores. Puedes tener varios activos con configuraciones diferentes.
+El script incluye funciones de gestión y edición en sus respectivas pestañas.
 
-### **Pestaña Editor**
-*   **Opacidad:** Controla la transparencia del Overlay.
-*   **Ajuste Fino (Nudge):** Usa las flechas para mover la imagen píxel por píxel si la posición inicial no fue precisa.
-*   **Capacidad:** ¡Soporte para imágenes de hasta **3000x3000px**!
+### Pestaña Herramientas (Tools)
+*   **Copiar Lienzo (Copy Canvas):** Descarga un recorte exacto y limpio del mapa actual en formato PNG.
+    1. Fija el **Punto A** haciendo clic en una esquina.
+    2. Fija el **Punto B** en la esquina opuesta.
+    3. Activa "Visualizar Área" y haz clic en "Descargar".
+*   **Análisis de Progreso (Color Analysis):** Abre un panel flotante para el seguimiento en tiempo real de tu proyecto.
+    *   Calcula el porcentaje total de progreso de tu overlay.
+    *   Muestra una lista de cuántos píxeles faltan, ordenados por color.
+    *   Permite aplicar filtros visuales para mostrar u ocultar colores específicos, facilitando el trabajo en equipo por zonas o tonos.
 
-### **Pestaña Herramientas**
-*   **Copiar Lienzo:** 
-    1. Fija el **Punto A**.
-    2. Fija el **Punto B**.
-    3. Clic en **Detectar y Descargar** para obtener una copia exacta de esa área del lienzo.
-
-*   **Mostrar Progreso del Overlay:** Abre un panel flotante para el seguimiento en tiempo real.
-    *   **Lista de Colores:** Muestra cuántos píxeles faltan de cada color.
-    *   **Filtros (⚙️):** Puedes ocultar colores terminados o filtrar la lista para delegar tareas.
-    *   **Optimización:** El panel ahora carga de forma instantánea sin congelar el navegador.
+### Pestaña Editor
+*   **Herramientas de Color (Color Tools):** Ajusta y sustituye los colores de tu plantilla por otros de la paleta oficial de Wplace antes de empezar a dibujar.
+*   **Redimensionar (Resize):** Herramienta integrada para escalar tu diseño internamente sin necesidad de usar programas externos.
 
 ---
 
-## **5. Soporte y Agradecimientos**
+## 4. Características Técnicas
 
-En la cabecera del panel encontrarás el botón de **Ajustes (⚙️)**:
-- **Tema:** Cambia entre modo Claro y Oscuro.
-- **Transparencia:** Ajusta la opacidad del panel.
+Esta versión ha sido reescrita para ofrecer una experiencia más fluida y estable:
 
-**❤️ Apoya el Proyecto**
-Este script es gratuito y se mantiene gracias a la comunidad. Si te ha sido útil para defender tu arte, considera apoyar el desarrollo con una donación (encontrarás la opción en los menús de ajustes).
+*   **Procesamiento Asíncrono (Web Workers):** La conversión de imágenes complejas se realiza en segundo plano, evitando que el navegador se congele (Anti-Lag) durante la carga.
+*   **Soporte de Alta Resolución:** El límite de tamaño para los overlays se ha ampliado, soportando imágenes de hasta **3000x3000px**.
+*   **Gestión Multi-Overlay Independiente:** Puedes mantener múltiples plantillas cargadas al mismo tiempo. Cada overlay guarda su propia posición, opacidad y configuración de filtros de color sin entrar en conflicto con los demás.
+*   **Optimización de Memoria:** Implementación de un límite en la caché de datos del mapa, reduciendo significativamente el consumo de RAM en sesiones largas.
+*   **Detección de Errores Mejorada:** Se ha corregido y ajustado la lógica para la detección de píxeles oscuros/negros, asegurando una visualización clara de los errores en cualquier tono.
 
 ---
 
-¡Disfruta creando en **wplace.live** con VoX Overlay Pro! 🚀
-Sinceramente no tenía intención de terminarlo, pero tuve un golpe de creatividad y aquí tienen. (no creo que publique más actualizaciones) a no ser que sean para actualizar compatibilidad.
+## 5. Soporte y Agradecimientos
+
+En la cabecera del panel principal encontrarás el botón de **Ajustes (⚙️)**, donde podrás:
+*   Alternar la interfaz entre el tema **Claro** y **Oscuro**.
+*   Ajustar la transparencia general del panel.
+
+Este proyecto es de código abierto (GPLv3) y su mantenimiento requiere tiempo. Si el script te ha sido útil para organizar a tu comunidad o defender tu arte, considera apoyar al desarrollador.
+
+Encontrarás los detalles para donaciones (Binance / PayPal) y la lista de agradecimientos a los colaboradores recientes dentro del menú de ajustes.
