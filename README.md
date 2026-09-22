@@ -26,7 +26,7 @@ Para utilizar este script, primero necesitas instalar un gestor de scripts en tu
    - [Tampermonkey para Firefox](https://addons.mozilla.org/es/firefox/addon/tampermonkey/)
    > *Nota para móviles: Si usas Edge en el móvil, puedes instalar la extensión directamente desde el menú "Extensiones" del navegador.*
 
-2. [**Haz clic aquí para instalar el script (v5.2.5)**](https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js).
+2. [**Haz clic aquí para instalar el script (v5.3.0)**](https://raw.githubusercontent.com/SrCratier/Wplace_VoX-Overlay-Pro/main/WplacePro-VoX.user.js).
 3. Tampermonkey abrirá una pestaña automáticamente pidiendo confirmación. Haz clic en **Instalar** o **Actualizar**.
 
 ---
